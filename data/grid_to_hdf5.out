@@ -1,0 +1,87 @@
+============================================================
+============================================================
+Found 19864 files to process...
+Loaded common wavelength grid from grid_wavelengths_windows.txt: 4851.9244 - 5400.0010 Å
+Grid points: 107467
+Processed 500/19864 files... (487 successful, 27.3 files/s, ETA: 710s)
+Processed 1000/19864 files... (973 successful, 24.2 files/s, ETA: 781s)
+Processed 1500/19864 files... (1465 successful, 23.2 files/s, ETA: 793s)
+Processed 2000/19864 files... (1955 successful, 22.7 files/s, ETA: 788s)
+Processed 2500/19864 files... (2447 successful, 22.3 files/s, ETA: 777s)
+Processed 3000/19864 files... (2933 successful, 22.2 files/s, ETA: 758s)
+Processed 3500/19864 files... (3420 successful, 22.4 files/s, ETA: 731s)
+Processed 4000/19864 files... (3910 successful, 22.3 files/s, ETA: 711s)
+Processed 4500/19864 files... (4396 successful, 22.3 files/s, ETA: 690s)
+Processed 5000/19864 files... (4884 successful, 22.3 files/s, ETA: 665s)
+Processed 5500/19864 files... (5373 successful, 22.5 files/s, ETA: 640s)
+Processed 6000/19864 files... (5855 successful, 22.6 files/s, ETA: 614s)
+Processed 6500/19864 files... (6348 successful, 22.6 files/s, ETA: 592s)
+Processed 7000/19864 files... (6837 successful, 22.5 files/s, ETA: 571s)
+Processed 7500/19864 files... (7328 successful, 22.6 files/s, ETA: 547s)
+Processed 8000/19864 files... (7818 successful, 22.6 files/s, ETA: 524s)
+Processed 8500/19864 files... (8302 successful, 22.6 files/s, ETA: 502s)
+Processed 9000/19864 files... (8790 successful, 22.7 files/s, ETA: 480s)
+Processed 9500/19864 files... (9283 successful, 22.6 files/s, ETA: 458s)
+Processed 10000/19864 files... (9776 successful, 22.6 files/s, ETA: 436s)
+Processed 10500/19864 files... (10265 successful, 22.7 files/s, ETA: 412s)
+Processed 11000/19864 files... (10752 successful, 22.7 files/s, ETA: 390s)
+Processed 11500/19864 files... (11244 successful, 22.6 files/s, ETA: 369s)
+Processed 12000/19864 files... (11732 successful, 22.6 files/s, ETA: 349s)
+Processed 12500/19864 files... (12218 successful, 22.6 files/s, ETA: 326s)
+Processed 13000/19864 files... (12712 successful, 22.6 files/s, ETA: 304s)
+Processed 13500/19864 files... (13196 successful, 22.6 files/s, ETA: 281s)
+Processed 14000/19864 files... (13682 successful, 22.7 files/s, ETA: 259s)
+Processed 14500/19864 files... (14168 successful, 22.7 files/s, ETA: 236s)
+Processed 15000/19864 files... (14654 successful, 22.7 files/s, ETA: 214s)
+Processed 15500/19864 files... (15136 successful, 22.8 files/s, ETA: 192s)
+Processed 16000/19864 files... (15627 successful, 22.8 files/s, ETA: 169s)
+Processed 16500/19864 files... (16117 successful, 22.8 files/s, ETA: 147s)
+Processed 17000/19864 files... (16605 successful, 22.8 files/s, ETA: 125s)
+Processed 17500/19864 files... (17089 successful, 22.8 files/s, ETA: 103s)
+Processed 18000/19864 files... (17577 successful, 22.9 files/s, ETA: 82s)
+Processed 18500/19864 files... (18069 successful, 22.8 files/s, ETA: 60s)
+Processed 19000/19864 files... (18552 successful, 22.9 files/s, ETA: 38s)
+Processed 19500/19864 files... (19039 successful, 22.9 files/s, ETA: 16s)
+Checkpointed 19393 spectra to weave_nlte_grids.h5
+
+HDF5 File Structure: weave_nlte_grids.h5
+==================================================
+filenames
+  └─ Dataset: shape=(19393,), dtype=|S50
+flux
+  └─ Dataset: shape=(19393, 107467), dtype=float32
+stellar_parameters
+  └─ Dataset: shape=(19393, 6), dtype=float32
+wavelength_grid
+  └─ Dataset: shape=(107467,), dtype=float32
+==================================================
+Successfully loaded 19393 spectra from checkpoint.
+Processing took 903.5 seconds
+
+Summary of skipped/fixed files:
+  NaN flux threshold: 10%
+  Skipped due to >10% NaN in flux: 470 out of 19864
+  Files with duplicate wavelength values fixed: 19392 out of 19864
+  Skipped files written to skipped.txt
+Data saved to weave_nlte_grids.h5
+File size: 2823.9 MB
+
+HDF5 File Structure: weave_nlte_grids.h5
+==================================================
+labels
+labels/filenames
+  └─ Dataset: shape=(19393,), dtype=|S50
+labels/stellar_parameters
+  └─ Dataset: shape=(19393, 6), dtype=float32
+metadata
+  └─ Attributes: {'n_spectra': 19393, 'stellar_param_names': array(['teff', 'log_g', 'metallicity', 'microturbulence',
+       'macroturbulence', 'vsini'], dtype=object)}
+spectra
+spectra/flux
+  └─ Dataset: shape=(19393, 107467), dtype=float32
+spectra/wavelength_grid
+  └─ Dataset: shape=(107467,), dtype=float32
+==================================================
+
+Processing complete!
+Job completed.
