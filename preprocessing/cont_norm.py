@@ -6,32 +6,17 @@ from astropy.stats import sigma_clip
 from scipy.ndimage import median_filter as scipy_median_filter
 import numpy as np
 
-def add_noise(flux, noise=0.07, inplace=False):
+def add_noise(flux, noise=0.07, inplace=False, seed=2025):
     """
     Add Gaussian noise to a flux array.
-
-    Parameters
-    ----------
-    flux : array-like
-        Input flux array.
-    noise : float, optional
-        Noise level as a fraction of the median flux (default: 0.07).
-    inplace : bool, optional
-        If True, modify the input array in-place. If False, return a new noisy array.
-
-    Returns
-    -------
-    noisy_flux : ndarray
-        Flux array with added Gaussian noise.
     """
     flux = np.asarray(flux)
     if not inplace:
         flux = flux.copy()
-    if isinstance(noise, (float, int, np.floating)):
-        noise_factor = noise * np.median(flux)
-        flux += noise_factor * np.random.normal(loc=0.0, scale=1.0, size=flux.shape)
-    else:
-        raise ValueError('Noise parameter must be a float or integer')
+
+    rng = np.random.default_rng(seed)
+    noise_factor = noise * np.median(flux)
+    flux += noise_factor * rng.normal(loc=0.0, scale=1.0, size=flux.shape)
     return flux
 
 def robust_polyfit_huber(flux, wavelength, degree=3, sigma_lower=None, sigma_upper=None, huber_f=1.0):
