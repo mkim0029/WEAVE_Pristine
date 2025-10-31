@@ -3,3 +3,5 @@ __pycache__/
 *.fits
 *.h5
 *.log
+*.npz
+*.csv

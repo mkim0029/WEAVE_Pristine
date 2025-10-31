@@ -13,6 +13,7 @@ from typing import Optional, Tuple, List
 from scipy import interpolate
 import time
 import concurrent.futures
+import random
 
 
 class SpectrumReaderHDF5:
@@ -112,7 +113,7 @@ class SpectrumReaderHDF5:
         return (np.array(wavelengths), np.array(fluxes), stellar_params, file_path.name)
     
     def read_multiple_files(self, directory_path: str, pattern: str = "Star*_N", 
-                          max_files: Optional[int] = None, chunk_size: int = 500, checkpoint_path: Optional[str] = None, n_workers: int = 4, grid_file: Optional[str] = None) -> None:
+                          max_files: Optional[int] = None, chunk_size: int = 500, checkpoint_path: Optional[str] = None, n_workers: int = 4, grid_file: Optional[str] = None, randomize: bool = False, seed: Optional[int] = None) -> None:
         """
         Read multiple spectrum files from a directory efficiently.
         
@@ -134,6 +135,14 @@ class SpectrumReaderHDF5:
             raise ValueError(f"No files found matching pattern '{pattern}' in {directory}")
         
         files.sort()
+        # Optionally randomize order before truncating to `max_files` so
+        # the output contains a random sample rather than the first N files
+        # in sorted order.
+        if randomize:
+            if seed is not None:
+                random.seed(seed)
+            random.shuffle(files)
+
         if max_files:
             files = files[:max_files]
         
@@ -446,12 +455,14 @@ def main():
     parser.add_argument('--grid-file', type=str, default="../data/grid_wavelengths_windows.txt", help="Path to wavelength grid file")
     parser.add_argument('--output', type=str, default="../data/weave_nlte_grids.h5", help="Output HDF5 file")
     parser.add_argument('--max-files', type=int, default=None, help="Maximum number of files to read")
+    parser.add_argument('--randomize', action='store_true', help='Randomly sample files before selecting max-files')
+    parser.add_argument('--seed', type=int, default=None, help='Random seed when --randomize is used')
     args = parser.parse_args()
 
     print("=" * 60)
     reader = SpectrumReaderHDF5()
     # Use checkpointing: write every 500 spectra to output file
-    reader.read_multiple_files(args.data_dir, max_files=args.max_files, checkpoint_path=args.output, chunk_size=500, grid_file=args.grid_file)
+    reader.read_multiple_files(args.data_dir, max_files=args.max_files, checkpoint_path=args.output, chunk_size=500, grid_file=args.grid_file, randomize=args.randomize, seed=args.seed)
     
     # Only save to HDF5 if data was loaded
     if reader.stellar_parameters is not None:
