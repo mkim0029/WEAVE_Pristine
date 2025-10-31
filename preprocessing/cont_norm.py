@@ -5,6 +5,8 @@ from astropy.stats import sigma_clip
 #from specutils import Spectrum1D
 from scipy.ndimage import median_filter as scipy_median_filter
 import numpy as np
+from scipy.optimize import least_squares
+import numpy.polynomial.legendre as leg
 
 def generate_noise(shape, noise=0.05, seed=2025):
     """
@@ -141,9 +143,7 @@ def legendre_polyfit_huber(flux, wavelength, degree=3, sigma_lower=2.0, sigma_up
     Robust Legendre polynomial continuum fitting using iterative sigma clipping + Huber loss.
     Similar to robust_polyfit_huber but uses Legendre polynomials which are more numerically stable.
     """
-    from scipy.optimize import least_squares
-    import numpy.polynomial.legendre as leg
-    
+
     # Convert inputs to NumPy arrays
     flux = np.asarray(flux)
     wavelength = np.asarray(wavelength)
