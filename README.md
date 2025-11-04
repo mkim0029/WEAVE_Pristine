@@ -18,7 +18,7 @@ Workflow
    - Files are expected to contain a header marker `# wave, flux` followed by two-column data (wavelength, flux).
 
 3. Convert and validate spectra in parallel
-   - File: `preprocessing/spectrum_grid_reader.py`
+   - File: `preprocessing/spectrum_grid_reader.py` (the main conversion pipeline). For single-file or small-batch preprocessing you can also use `preprocessing/preprocess.py` which wraps loading, optional noise addition and normalization into a simpler interface.
    - What: The conversion pipeline scans the input directory, then reads spectra in parallel, validating each file:
      - Checks for NaN/Inf in wavelength or flux
      - Detects duplicate wavelengths (keeps first occurrence)
@@ -49,6 +49,7 @@ Workflow
 8. Interactive plotting and inspection
    - File: `preprocessing/spectrum_plotting.ipynb`
    - What: Notebook examples to load the HDF5 with `HDF5SpectrumReader`, plot full spectra and zoomed regions, and save plots/CSV for individual spectra.
+   - Quick test notebook: `testing/plot_spectrum.ipynb` — a small notebook added to the repo that loads `data/processed_spectra.h5` and plots wavelength vs flux for a single spectrum (handy for quick checks).
 
 Quick usage examples
 --------------------
@@ -77,4 +78,20 @@ Where things live
 -----------------
 - `preprocessing/`: scripts, helper modules, notebooks, SLURM job scripts.
 - `data/`: generated HDF5 file (`weave_nlte_grids.h5`), grid files, and `skipped.txt`.
+
+Model training (quick pointer)
+-----------------------------
+Model training scripts and examples live in the `pytorch_models/` folder. A
+documented trainer `new_MLP.py` is provided which consumes a processed HDF5
+file (for example `data/processed_spectra.h5`) and writes a model checkpoint
+and a small training history archive. See `pytorch_models/README.md` for full
+details and example commands. A minimal training example:
+
+```bash
+cd pytorch_models
+python new_MLP.py --input ../data/processed_spectra.h5 --epochs 50 --batch-size 64 --lr 1e-4 --model-path ./new_mlp_model
+```
+
+The trainer will produce `<model-path>.pth` (checkpoint with normalization stats)
+and `<model-path>.history.npz` (training/validation loss history).
 

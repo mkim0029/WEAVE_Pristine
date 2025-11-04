@@ -32,11 +32,11 @@ import h5py
 # Add parent directory to path for local imports
 project_root = Path(__file__).parent.parent
 preprocessing_dir = project_root / "preprocessing"
-cnn_pytorch_dir = project_root / "cnn_pytorch"
+pytorch_models_dir = project_root / "pytorch_models"
 
 sys.path.append(str(project_root))
 sys.path.append(str(preprocessing_dir))
-sys.path.append(str(cnn_pytorch_dir))
+sys.path.append(str(pytorch_models_dir))
 
 try:
     from preprocessing.preprocess import load_spectra_from_hdf5, add_noise_to_spectra, normalize_spectra
@@ -46,7 +46,7 @@ except ImportError as e:
     print(f"Error importing local modules: {e}")
     print(f"Project root: {project_root}")
     print(f"Preprocessing dir: {preprocessing_dir}")
-    print(f"CNN PyTorch dir: {cnn_pytorch_dir}")
+    print(f"CNN PyTorch dir: {pytorch_models_dir}")
     print("Make sure all required files exist in their respective directories")
     sys.exit(1)
 

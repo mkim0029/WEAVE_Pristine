@@ -13,6 +13,12 @@ Contents
   - `spectra/flux` (n_spectra, n_wavelengths) linearly interpolated flux
   - `spectra/wavelength_grid` (n_wavelengths,)
 
+- `processed_spectra.h5` — example processed HDF5 file produced by `preprocessing/preprocess.py` (or other downstream steps). Typical structure used for CNN training:
+  - `wavelength` (n_wavelengths,)  — 1D wavelength grid
+  - `flux_normalized` (n_spectra, n_wavelengths) — continuum-normalized flux ready for ML
+  - `continuum_fits` (n_spectra, n_wavelengths) — fitted continuum models (optional)
+  - `original_*` datasets/attributes — any copied metadata from the original HDF5 (e.g., `original_stellar_parameters`)
+
 - `skipped.txt` — list of filenames skipped during preprocessing (NaN-dominated or unrecoverable files).
 
 - `grid_wavelengths_windows.txt` — common wavelength grid to be used for re-sampling raw spectra and calibrate them. Sample size of 500 gives very similar results to sample size of 200.
@@ -39,7 +45,7 @@ Results from sampled spectra:
 
 How files are produced
 ---------------------
-Run the preprocessing conversion script (see `preprocessing/spectrum_grid_reader.py`) to read raw spectra, validate/clean them, interpolate onto a common wavelength grid, and write the consolidated HDF5 file. For long runs the script supports checkpointing so it can resume if interrupted.
+Run the preprocessing conversion script (see `preprocessing/spectrum_grid_reader.py`) to read raw spectra, validate/clean them, interpolate onto a common wavelength grid, and write the consolidated HDF5 file. For smaller jobs or quick experiments use `preprocessing/preprocess.py` which loads an HDF5 file, optionally adds noise, normalizes spectra (e.g. via `legendre_polyfit_huber`) and writes a `processed_spectra.h5` file with keys like `flux_normalized`.
 
 Quick check
 -----------

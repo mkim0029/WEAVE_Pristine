@@ -27,12 +27,11 @@ Usage:
 """
 
 import torch
-import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader, random_split
 import h5py
 import numpy as np
 from pathlib import Path
-from typing import Tuple, Optional, List, Dict, Any, Union
+from typing import Tuple, Optional, Dict, Union
 import warnings
 
 
@@ -64,6 +63,9 @@ class SpectralDataset(Dataset):
         Device to load tensors on ('cpu', 'cuda', default: 'cpu')
     dtype : torch.dtype, optional
         Data type for tensors (default: torch.float32)
+
+    *transform and target_transform can be used to augment and/or preprocess the data
+
     """
     
     def __init__(
@@ -75,6 +77,7 @@ class SpectralDataset(Dataset):
         target_transform: Optional[callable] = None,
         load_targets: bool = False,
         target_key: str = 'targets',
+        use_target_indices: Optional[list[int]] = None,
         device: str = 'cpu',
         dtype: torch.dtype = torch.float32
     ):
@@ -85,8 +88,12 @@ class SpectralDataset(Dataset):
         self.target_transform = target_transform
         self.load_targets = load_targets
         self.target_key = target_key
+        self.use_target_indices = use_target_indices
         self.device = device
         self.dtype = dtype
+
+        self.target_mean = None
+        self.target_std = None
         
         # Validate file exists
         if not self.hdf5_filepath.exists():
@@ -103,6 +110,10 @@ class SpectralDataset(Dataset):
         print(f"  Wavelength range: {self.wavelength_min:.2f} - {self.wavelength_max:.2f} Å")
         print(f"  Flux key: {self.flux_key}")
         print(f"  Load targets: {self.load_targets}")
+        if self.load_targets:
+            print(f"  Target key: {self.target_key}")
+            if self.use_target_indices:
+                print(f"  Using target indices: {self.use_target_indices}")
         print(f"  Device: {self.device}")
         
     def _load_metadata(self):
@@ -110,34 +121,32 @@ class SpectralDataset(Dataset):
         with h5py.File(self.hdf5_filepath, 'r') as f:
             # Check available datasets
             self.available_keys = list(f.keys())
-            print(f"Available datasets: {self.available_keys}")
             
             # Validate required keys exist
             if self.flux_key not in f:
-                raise KeyError(f"Flux key '{self.flux_key}' not found in HDF5 file. Available: {self.available_keys}")
+                raise KeyError(f"Flux key '{self.flux_key}' not found in HDF5 file.")
             if self.wavelength_key not in f:
-                raise KeyError(f"Wavelength key '{self.wavelength_key}' not found in HDF5 file. Available: {self.available_keys}")
+                raise KeyError(f"Wavelength key '{self.wavelength_key}' not found in HDF5 file.")
             
             # Load metadata
             flux_shape = f[self.flux_key].shape
-            wavelength_shape = f[self.wavelength_key].shape
+            self.wavelength = f[self.wavelength_key][:]
             
             self.n_spectra = flux_shape[0]
-            self.n_wavelengths = flux_shape[1] if len(flux_shape) > 1 else len(wavelength_shape)
-            
-            # Load wavelength array (usually small enough to keep in memory)
-            self.wavelength = f[self.wavelength_key][:]
-            self.wavelength_min = float(np.min(self.wavelength))
-            self.wavelength_max = float(np.max(self.wavelength))
-            
-            # Check for targets if requested
+            self.n_wavelengths = flux_shape[1]
+            self.wavelength_min = self.wavelength[0]
+            self.wavelength_max = self.wavelength[-1]
+
             if self.load_targets:
                 if self.target_key not in f:
-                    warnings.warn(f"Target key '{self.target_key}' not found. Setting load_targets=False")
-                    self.load_targets = False
+                    raise KeyError(f"Target key '{self.target_key}' not found in HDF5 file.")
+                
+                # Determine the number of targets based on the user's selection
+                if self.use_target_indices:
+                    self.n_targets = len(self.use_target_indices)
                 else:
-                    self.target_shape = f[self.target_key].shape
-                    print(f"  Target shape: {self.target_shape}")
+                    # If no indices are specified, use all targets
+                    self.n_targets = f[self.target_key].shape[1]
             
             # Load any additional metadata from attributes
             self.metadata = dict(f.attrs)
@@ -151,7 +160,26 @@ class SpectralDataset(Dataset):
             raise ValueError("No spectra found in dataset")
         
         print(f"Data validation passed")
-    
+
+    def set_target_stats(self, mean: np.ndarray, std: np.ndarray):
+        """
+        Set the mean and std for target normalization.
+
+        Parameters
+        ----------
+        mean : np.ndarray
+            Mean of each target parameter.
+        std : np.ndarray
+            Standard deviation of each target parameter.
+        """
+        print("Setting target normalization statistics...")
+        self.target_mean = torch.from_numpy(mean).to(dtype=self.dtype, device=self.device)
+        self.target_std = torch.from_numpy(std).to(dtype=self.dtype, device=self.device)
+        # Add a small epsilon to std to avoid division by zero
+        self.target_std[self.target_std == 0] = 1e-6
+        print(f"  Mean: {self.target_mean.cpu().numpy()}")
+        print(f"  Std: {self.target_std.cpu().numpy()}")
+
     def __len__(self) -> int:
         """Return the number of spectra in the dataset."""
         return self.n_spectra
@@ -174,27 +202,73 @@ class SpectralDataset(Dataset):
         if idx >= self.n_spectra or idx < 0:
             raise IndexError(f"Index {idx} out of range for dataset with {self.n_spectra} spectra")
         
-        # Load spectrum from HDF5 file
+        # Load spectrum from HDF5 file (as numpy), then convert to torch.Tensor
         with h5py.File(self.hdf5_filepath, 'r') as f:
-            spectrum = f[self.flux_key][idx].astype(np.float32)
-            
-            if self.load_targets:
-                target = f[self.target_key][idx]
-        
-        # Convert to PyTorch tensors
-        spectrum = torch.from_numpy(spectrum).to(dtype=self.dtype, device=self.device)
-        
-        # Apply transforms
+            spectrum_np = f[self.flux_key][idx].astype(np.float32)
+
+        # Convert spectrum to torch tensor and move to device
+        spectrum = torch.from_numpy(spectrum_np).to(dtype=self.dtype, device=self.device)
+
+        # Apply spectrum transform if provided (transforms should accept torch.Tensor)
         if self.transform is not None:
             spectrum = self.transform(spectrum)
-        
+
         if self.load_targets:
-            target = torch.from_numpy(target).to(dtype=self.dtype, device=self.device)
-            if self.target_transform is not None:
+            # Load targets (as numpy) and select subset if requested
+            with h5py.File(self.hdf5_filepath, 'r') as f:
+                target_np = f[self.target_key][idx]
+
+            if self.use_target_indices:
+                target_np = target_np[self.use_target_indices]
+
+            # Convert target to tensor and apply normalization/transform
+            target = torch.from_numpy(target_np).to(dtype=self.dtype, device=self.device)
+
+            if self.target_mean is not None and self.target_std is not None:
+                target = (target - self.target_mean) / self.target_std
+            elif self.target_transform is not None:
                 target = self.target_transform(target)
+
             return spectrum, target
         else:
             return spectrum
+
+    def inverse_transform_target(self, target: torch.Tensor) -> torch.Tensor:
+        """
+        Applies the inverse normalization transform to a target tensor.
+
+        Parameters
+        ----------
+        target : torch.Tensor
+            A normalized target tensor.
+
+        Returns
+        -------
+        torch.Tensor
+            The target tensor in its original physical scale.
+        """
+        if self.target_mean is None or self.target_std is None:
+            warnings.warn("Target stats not set. Returning original tensor.")
+            return target
+        
+        return target * self.target_std + self.target_mean
+
+    def get_all_targets(self) -> Optional[np.ndarray]:
+        """
+        Load all targets from the HDF5 file into memory.
+
+        Returns
+        -------
+        np.ndarray or None
+            A numpy array of all targets, or None if not loading targets.
+        """
+        if not self.load_targets:
+            return None
+        with h5py.File(self.hdf5_filepath, 'r') as f:
+            all_targets = f[self.target_key][:]
+            if self.use_target_indices:
+                return all_targets[:, self.use_target_indices]
+            return all_targets
     
     def get_wavelength_tensor(self) -> torch.Tensor:
         """Get wavelength array as PyTorch tensor."""
