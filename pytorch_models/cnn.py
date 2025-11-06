@@ -4,12 +4,39 @@ Convolutional Neural Network (CNN) for Stellar Parameter Prediction
 ============================================================
 
 Usage:
-    python CNN.py \\
+    python cnn.py \\
         --input ../data/processed_spectra.h5 \\
         --epochs 50 \\
         --batch-size 64 \\
         --lr 1e-4 \\
         --model-path ./cnn_model
+
+Description:
+    This script trains a 1D convolutional neural network (CNN) following the
+    StarNet2017 architecture to predict stellar parameters from preprocessed 
+    spectral data stored in an HDF5 file.
+
+    The CNN architecture consists of:
+    1. Two 1D convolutional layers (1->4->16 filters) with ReLU activation
+    2. Max pooling layer (pool_size=4)
+    3. Flattening and two fully connected layers (256->128 neurons)
+    4. Final linear layer for regression output
+
+    The script performs the following high-level steps:
+    1. Parse command-line arguments for dataset path, training settings, and device.
+    2. Load the custom `SpectralDataset` which provides spectra and target labels.
+    3. Split the dataset into training and validation sets using helper utilities.
+    4. Compute normalization statistics from the training split and apply them to
+         the dataset so targets are standardized for training.
+    5. Instantiate a CNN model, loss function, and optimizer.
+    6. Train the model while tracking training and validation loss.
+    7. Save the model state along with normalization statistics and a small
+         training history file for later analysis / inference.
+
+Notes:
+    - This CNN expects 1D spectral input with shape (batch, 1, length).
+    - The model automatically handles input reshaping if needed.
+    - Architecture parameters are saved with the checkpoint for easy inference.
 """
 
 import argparse
@@ -34,20 +61,55 @@ except ImportError as e:
     print("Please ensure that 'spectral_dataset.py' is in the 'pytorch_models' directory.")
     sys.exit(1)
 
-class MLP(nn.Module):
-    def __init__(self, input_size: int, output_size: int, hidden_layers: list = [1024, 512]):
+class CNN(nn.Module):
+    def __init__(self, kernel_size: int, input_length: int, output_size: int):
         super().__init__()
-
-        self.linear_relu_stack = nn.Sequential(
-            nn.Linear(input_size, hidden_layers[0]),
+        
+        # Store parameters for saving/inspection
+        self.kernel_size = kernel_size
+        self.input_length = input_length
+        self.output_size = output_size
+        
+        # Convolutional and pooling layers
+        self.conv1 = nn.Conv1d(1, 4, kernel_size)
+        self.conv2 = nn.Conv1d(4, 16, kernel_size)
+        self.pool = nn.MaxPool1d(4, 4)
+        
+        # Calculate output size after conv and pooling operations
+        # After conv1: length = input_length - kernel_size + 1
+        # After conv2: length = (input_length - kernel_size + 1) - kernel_size + 1 = input_length - 2*kernel_size + 2
+        # After pool: length = floor((input_length - 2*kernel_size + 2) / 4)
+        conv_output_length = input_length - 2 * kernel_size + 2
+        pool_output_length = conv_output_length // 4
+        
+        if pool_output_length <= 0:
+            raise ValueError(f"Input length {input_length} too small for kernel size {kernel_size}")
+        
+        flattened_size = 16 * pool_output_length
+        
+        # Fully connected layers
+        self.fc_layers = nn.Sequential(
+            nn.Linear(flattened_size, 256),
             nn.ReLU(),
-            nn.Linear(hidden_layers[0], hidden_layers[1]),
+            nn.Linear(256, 128),
             nn.ReLU(),
-            nn.Linear(hidden_layers[1], output_size),
+            nn.Linear(128, output_size)
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return self.linear_relu_stack(x)    
+        # Ensure input has channel dimension
+        if x.dim() == 2:  # (batch_size, input_length)
+            x = x.unsqueeze(1)  # (batch_size, 1, input_length)
+            
+        # Convolutional layers
+        x = torch.relu(self.conv1(x))
+        x = torch.relu(self.conv2(x))
+        x = self.pool(x)
+        
+        # Flatten and fully connected layers
+        x = torch.flatten(x, 1)
+        x = self.fc_layers(x)
+        return x
 
 def train_model(
     model: nn.Module,
@@ -59,7 +121,38 @@ def train_model(
     epochs: int,
     device: str
 ) -> dict:
-    history = {'train_loss': [], 'val_loss': [], 'val_rmse': []}
+    """
+    Train the provided model using the given DataLoaders.
+
+    The function runs a standard supervised training loop for `epochs` epochs.
+    It records average training loss per epoch and computes validation loss
+    after each epoch using `evaluate_model`.
+
+    Parameters
+    ----------
+    model : nn.Module
+        Model instance to train.
+    dataset : SpectralDataset
+        Dataset object (not directly iterated here but kept for context).
+    train_loader : DataLoader
+        DataLoader yielding training batches (spectra, targets).
+    val_loader : DataLoader
+        DataLoader for validation/evaluation.
+    optimizer : optim.Optimizer
+        Optimizer for parameter updates.
+    criterion : nn.Module
+        Loss function (e.g., nn.MSELoss for regression).
+    epochs : int
+        Number of training epochs.
+    device : str
+        Device string ('cuda' or 'cpu') to move tensors to.
+
+    Returns
+    -------
+    dict
+        Dictionary containing lists for 'train_loss' and 'val_loss'.
+    """
+    history = {'train_loss': [], 'val_loss': []}
     model.to(device)
 
     print("Starting training...")
@@ -115,13 +208,13 @@ def evaluate_model(model: nn.Module,
     return running_loss / len(loader)
 
 def main():
-    """Main function to run the MLP training and evaluation."""
+    """Main function to run the CNN training and evaluation."""
     parser = argparse.ArgumentParser(
-        description="Train an MLP for stellar parameter prediction.",
+        description="Train a CNN for stellar parameter prediction.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
     parser.add_argument('--input', '-i', required=True, help='Path to the processed HDF5 spectral data file.')
-    parser.add_argument('--model-path', type=str, default='mlp_model.pth', help='Path to save the trained model.')
+    parser.add_argument('--model-path', type=str, default='cnn_model.pth', help='Path to save the trained model.')
     parser.add_argument('--epochs', type=int, default=50, help='Number of training epochs.')
     parser.add_argument('--batch-size', type=int, default=64, help='Batch size for training.')
     parser.add_argument('--lr', type=float, default=1e-4, help='Learning rate for the optimizer.')
@@ -135,7 +228,7 @@ def main():
     np.random.seed(args.seed)
 
     print("=" * 60)
-    print("MLP Training for Stellar Parameter Prediction")
+    print("CNN Training for Stellar Parameter Prediction")
     print("=" * 60)
     print(f"Arguments: {vars(args)}")
 
@@ -187,13 +280,16 @@ def main():
 
     # --- 4. Initialize Model, Loss, and Optimizer ---
     print("\n4. Initializing model...")
-    input_size = dataset.n_wavelengths
+    input_length = dataset.n_wavelengths
     output_size = dataset.n_targets  # This is now correctly set in the dataset
+    kernel_size = 8  # You can make this a command line argument if desired
     
-    print(f"  Input features (wavelengths): {input_size}")
+    print(f"  Input length (wavelengths): {input_length}")
     print(f"  Output features (targets): {output_size}")
+    print(f"  Kernel size: {kernel_size}")
 
-    model = MLP(input_size=input_size, output_size=output_size)
+    # Instantiate your CNN model
+    model = CNN(kernel_size=kernel_size, input_length=input_length, output_size=output_size)
     print(model)
 
     criterion = nn.MSELoss()  # Mean Squared Error for regression
@@ -217,12 +313,11 @@ def main():
     np.savez(
         history_path,
         train_loss=np.array(history['train_loss']),
-        val_loss=np.array(history['val_loss']),
-        val_rmse=np.array(history['val_rmse'])
+        val_loss=np.array(history['val_loss'])
     )
     print(f"Training history saved to {history_path}")
 
-    # --- 6. Save the Model and Normalization Stats ---
+    # --- 6. Save the Model and Architecture Info ---
     print(f"\n6. Saving trained model to {Path(args.model_path).with_suffix('.pth')}...")
     try:
         # It's crucial to save the normalization stats with the model
@@ -231,16 +326,16 @@ def main():
             'model_state_dict': model.state_dict(),
             'target_mean': target_mean,
             'target_std': target_std,
-            'input_size': input_size,
+            'input_length': input_length,
             'output_size': output_size,
-            'hidden_layers': model.network[0].out_features # A bit of a hack to get first hidden layer size
+            'kernel_size': model.kernel_size
         }, Path(args.model_path).with_suffix('.pth'))
         print("Model and normalization stats saved successfully.")
     except Exception as e:
         print(f"Error saving model: {e}")
 
     print("\n" + "=" * 60)
-    print("MLP Training Complete")
+    print("CNN Training Complete")
     print("=" * 60)
 
 

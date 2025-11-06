@@ -61,3 +61,18 @@ Notes
 -----
 - This folder should contain only data files. Store scripts and notebooks in `preprocessing/`.
 - Back up `weave_nlte_grids.h5` if you plan to re-run the conversion pipeline.
+- Full list of labels or headers available in the raw MPIA/NLTE spectra (currently looking at 4 labels: teff, log g, met, micro):
+```python
+# teff, log g, met, micro, macro, vsini
+# 5000.0   3.60   0.30   2.00   0.00   0.00
+# wmin, wmax, min_sw, max_sw, sw_crit
+# R=    0.0
+#       4830.0000   5400.0000  5.0000  1.5000   0.10
+# NLTE elements
+#   01.01  08.01  12.01  14.01  20.01  20.02  22.01  22.02  26.01  25.01  24.01  27.01
+#  elements with corrected abundance: corrections [X/Fe]
+#     8   10   12   14   16   18   20   22:  0.25  0.25  0.25  0.25  0.25  0.25  0.25  0.25
+# HEADER:
+########################################################
+# wave, flux
+```
