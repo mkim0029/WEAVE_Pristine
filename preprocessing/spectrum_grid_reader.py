@@ -456,7 +456,7 @@ def main():
     parser.add_argument('--output', type=str, default="../data/weave_nlte_grids.h5", help="Output HDF5 file")
     parser.add_argument('--max-files', type=int, default=None, help="Maximum number of files to read")
     parser.add_argument('--randomize', action='store_true', help='Randomly sample files before selecting max-files')
-    parser.add_argument('--seed', type=int, default=None, help='Random seed when --randomize is used')
+    parser.add_argument('--seed', type=int, default=None, help='Random seed when --randomize is used') #2025
     args = parser.parse_args()
 
     print("=" * 60)
