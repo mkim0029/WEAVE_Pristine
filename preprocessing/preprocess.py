@@ -99,21 +99,20 @@ def add_noise_to_spectra(flux_array, noise_level=0.1, seed=2025):
     -------
     noisy_flux : np.ndarray
         Flux array with added Gaussian noise
-    noise_vectors : np.ndarray
-        The noise vectors that were added (for debugging/analysis)
     """
     print(f"Adding Gaussian noise (σ={noise_level}) with seed={seed}")
     
     n_spectra, n_wavelengths = flux_array.shape
 
-    # Generate the same noise vector for all spectra
-    noise_vector = generate_noise(shape=(n_wavelengths,), noise=noise_level, seed=seed)
+    # Generate different noise realizations for each spectrum using the same seed
+    # This creates a single RNG with the specified seed, then draws multiple samples
+    noise_vectors = generate_noise(shape=(n_spectra, n_wavelengths), noise=noise_level, seed=seed)
     
-    # Add the same noise vector to all spectra
-    noisy_flux = flux_array + noise_vector[np.newaxis, :]
+    # Add different noise vectors to each spectrum
+    noisy_flux = flux_array + noise_vectors
     
     print(f"Added noise to {n_spectra} spectra")
-    print(f"Noise statistics: mean={np.mean(noise_vector):.6f}, std={np.std(noise_vector):.6f}")
+    print(f"Noise statistics: mean={np.mean(noise_vectors):.6f}, std={np.std(noise_vectors):.6f}")
     
     return noisy_flux
 
