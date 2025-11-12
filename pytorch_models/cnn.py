@@ -111,6 +111,29 @@ class CNN(nn.Module):
         x = self.fc_layers(x)
         return x
 
+def compute_gradient_norm(model: nn.Module) -> float:
+    """
+    Compute the L2 norm of gradients across all model parameters.
+    
+    Returns
+    -------
+    float
+        L2 norm of all gradients, or 0.0 if no gradients exist.
+    """
+    total_norm = 0.0
+    param_count = 0
+    
+    for param in model.parameters():
+        if param.grad is not None:
+            param_norm = param.grad.data.norm(2)
+            total_norm += param_norm.item() ** 2
+            param_count += 1
+    
+    if param_count == 0:
+        return 0.0
+    
+    return total_norm ** 0.5
+
 def train_model(
     model: nn.Module,
     dataset: SpectralDataset,
@@ -126,7 +149,8 @@ def train_model(
 
     The function runs a standard supervised training loop for `epochs` epochs.
     It records average training loss per epoch and computes validation loss
-    after each epoch using `evaluate_model`.
+    after each epoch using `evaluate_model`. Also monitors gradient norms
+    to detect vanishing/exploding gradients.
 
     Parameters
     ----------
@@ -150,15 +174,16 @@ def train_model(
     Returns
     -------
     dict
-        Dictionary containing lists for 'train_loss' and 'val_loss'.
+        Dictionary containing lists for 'train_loss', 'val_loss', and gradient statistics.
     """
-    history = {'train_loss': [], 'val_loss': []}
+    history = {'train_loss': [], 'val_loss': [], 'grad_norm_mean': [], 'grad_norm_max': [], 'grad_norm_min': []}
     model.to(device)
 
     print("Starting training...")
     for epoch in range(epochs):
         model.train()
         running_loss = 0.0
+        epoch_grad_norms = []
         start_time = time.time()
 
         for batch, (spectra, targets) in enumerate(train_loader):
@@ -168,6 +193,17 @@ def train_model(
 
             # Backpropagation
             loss.backward()
+            
+            # Compute gradient norm before optimizer step
+            grad_norm = compute_gradient_norm(model)
+            epoch_grad_norms.append(grad_norm)
+            
+            # Check for exploding gradients (> 10.0 is concerning)
+            if grad_norm > 10.0:
+                print(f"  WARNING: Large gradient norm detected: {grad_norm:.4f} (Epoch {epoch+1}, Batch {batch+1})")
+            elif grad_norm < 1e-6:
+                print(f"  WARNING: Very small gradient norm detected: {grad_norm:.6f} (Epoch {epoch+1}, Batch {batch+1})")
+            
             optimizer.step()
             optimizer.zero_grad()
 
@@ -175,16 +211,30 @@ def train_model(
         
         epoch_loss = running_loss / len(train_loader)
         history['train_loss'].append(epoch_loss)
+        
+        # Store gradient statistics
+        if epoch_grad_norms:
+            history['grad_norm_mean'].append(np.mean(epoch_grad_norms))
+            history['grad_norm_max'].append(np.max(epoch_grad_norms))
+            history['grad_norm_min'].append(np.min(epoch_grad_norms))
+        else:
+            history['grad_norm_mean'].append(0.0)
+            history['grad_norm_max'].append(0.0)
+            history['grad_norm_min'].append(0.0)
 
         # Validation
         val_loss = evaluate_model(model, val_loader, criterion, device)
         history['val_loss'].append(val_loss)
         
         epoch_duration = time.time() - start_time
+        grad_mean = history['grad_norm_mean'][-1]
+        grad_max = history['grad_norm_max'][-1]
+        
         print(
             f"Epoch {epoch+1}/{epochs} | "
             f"Train Loss: {epoch_loss:.4f} | "
             f"Val Loss: {val_loss:.4f} | "
+            f"Grad Norm (avg/max): {grad_mean:.4f}/{grad_max:.4f} | "
             f"Duration: {epoch_duration:.2f}s"
         )
 
@@ -313,7 +363,10 @@ def main():
     np.savez(
         history_path,
         train_loss=np.array(history['train_loss']),
-        val_loss=np.array(history['val_loss'])
+        val_loss=np.array(history['val_loss']),
+        grad_norm_mean=np.array(history['grad_norm_mean']),
+        grad_norm_max=np.array(history['grad_norm_max']),
+        grad_norm_min=np.array(history['grad_norm_min'])
     )
     print(f"Training history saved to {history_path}")
 
