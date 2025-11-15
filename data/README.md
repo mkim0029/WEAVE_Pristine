@@ -47,6 +47,20 @@ How files are produced
 ---------------------
 Run the preprocessing conversion script (see `preprocessing/spectrum_grid_reader.py`) to read raw spectra, validate/clean them, interpolate onto a common wavelength grid, and write the consolidated HDF5 file. For smaller jobs or quick experiments use `preprocessing/preprocess.py` which loads an HDF5 file, optionally adds noise, normalizes spectra (e.g. via `legendre_polyfit_huber`) and writes a `processed_spectra.h5` file with keys like `flux_normalized`.
 
+train/validate set:
+```
+python spectrum_grid_reader.py --grid-file ../data/test_slice_grid.txt --output ../data/test.h5 --max-files 1000 --randomize --seed 2025
+
+python preprocess.py --input ../data/test.h5 --output ../data/processed_spectra.h5
+```
+
+test set:
+```
+python spectrum_grid_reader.py --grid-file ../data/test_slice_grid.txt --output ../data/test_200.h5 --max-files 200 --randomize --seed 2026
+
+python preprocess.py --input ../data/test_200.h5 --output ../data/test_normalised.h5
+```
+
 Quick check
 -----------
 To quickly inspect the HDF5 file from Python:

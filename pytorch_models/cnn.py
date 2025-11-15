@@ -210,6 +210,38 @@ def train_model(
             running_loss += loss.item()
         
         epoch_loss = running_loss / len(train_loader)
+        # --- Evaluate training loss in eval-mode (no dropout / BatchNorm noise) ---
+        # Build an evaluation DataLoader over the training subset with deterministic ordering.
+        eval_train_loader = DataLoader(
+            train_loader.dataset,               # Subset returned by random_split
+            batch_size=getattr(train_loader, "batch_size", None),
+            shuffle=False,
+            num_workers=0,
+            pin_memory=False,
+            drop_last=False
+        )
+
+        model.eval()
+        eval_train_loss_sum = 0.0
+        n_eval_samples = len(eval_train_loader.dataset)
+
+        with torch.no_grad():
+            for spectra, targets in eval_train_loader:
+                pred = model(spectra.to(device))
+                loss = criterion(pred, targets.to(device))
+                # accumulate loss weighted by samples in batch to get exact average
+                eval_train_loss_sum += loss.item() * spectra.size(0)
+
+        # average over number of samples in the training split
+        eval_train_loss = eval_train_loss_sum / max(1, n_eval_samples)
+
+        # Log both quantities for diagnosis
+        print(f"  Train Loss (batch-average): {epoch_loss:.4f} | "
+            f"Train Loss (eval-mode full training set): {eval_train_loss:.4f}")
+        # Optionally store it in history if you want:
+        history.setdefault('train_loss_eval_mode', []).append(eval_train_loss)
+        # --- End eval-mode training loss check ---
+        
         history['train_loss'].append(epoch_loss)
         
         # Store gradient statistics
