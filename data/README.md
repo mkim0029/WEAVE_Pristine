@@ -49,16 +49,21 @@ Run the preprocessing conversion script (see `preprocessing/spectrum_grid_reader
 
 train/validate set:
 ```
-python spectrum_grid_reader.py --grid-file ../data/test_slice_grid.txt --output ../data/test.h5 --max-files 1000 --randomize --seed 2025
+python spectrum_grid_reader.py --grid-file ../data/grid_wavelengths_windows.txt --output ../data/test.h5 --max-files 
+1000 --randomize --seed 2025
 
 python preprocess.py --input ../data/test.h5 --output ../data/processed_spectra.h5
+
+python slice.py --input processed_spectra.h5 --grid test_slice_grid.txt --output processed_spectra_sliced.h5
 ```
 
 test set:
 ```
-python spectrum_grid_reader.py --grid-file ../data/test_slice_grid.txt --output ../data/test_200.h5 --max-files 200 --randomize --seed 2026
+python spectrum_grid_reader.py --grid-file ../data/grid_wavelengths_windows.txt --output ../data/test_200.h5 --max-files 200 --randomize --seed 2026
 
 python preprocess.py --input ../data/test_200.h5 --output ../data/test_normalised.h5
+
+python slice.py --input test_normalised.h5 --grid test_slice_grid.txt --output test_normalised_sliced.h5
 ```
 
 Quick check
