@@ -1,9 +1,0 @@
-# This command clears all loaded modules for a clean start.
-module purge
-
-#source /home/minjihk/projects/def-sfabbro/minjihk/torchnet/bin/activate
-
-# Load a standard environment and the pre-built SciPy stack which includes matplotlib, scipy, etc.
-module load StdEnv/2020
-module load scipy-stack
-module load hdf5/1.10.6

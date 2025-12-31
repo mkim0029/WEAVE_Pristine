@@ -6,3 +6,7 @@ __pycache__/
 *.npz
 *.csv
 *.pth
+*.xy
+*.xyz
+legacy_data/
+legacy_models/
