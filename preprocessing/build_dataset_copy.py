@@ -24,8 +24,8 @@ except ImportError:
 # Configuration
 RAW_DATA_DIR = os.path.expanduser("~/scratch/mpia_results_10k")
 METADATA_FILE = "data/GA-QAG_OPR3bv3_MasterTableCodev4_GoldenSample_RELEASE.fits"
-RAW_HDF5_FILE = "data/raw_spectra_10k.h5"
-PROCESSED_HDF5_FILE = "data/processed_spectra_10k.h5"
+RAW_HDF5_FILE = "data/raw_spectra_1.h5"
+PROCESSED_HDF5_FILE = "data/processed_spectra_1.h5"
 
 # Grid Definition
 WAVE_START = 4040.0

@@ -85,12 +85,21 @@ class WeaveOnlineDataset(Dataset):
             data = hdul[1].data
             mask = data['MODE'] == 'HIGHRES'
             filtered = data[mask]
+            # Note: FITS data is big-endian, but pandas requires little-endian.
+            # We must cast to native byte order to avoid "ValueError: Big-endian buffer not supported"
             df = pd.DataFrame({
-                'RESOL': filtered['RESOL'],
-                'SNR_blue': filtered['SNR_blue_QAG'],
-                'SNR_green': filtered['SNR_green_QAG'],
-                'SNR_red': filtered['SNR_red_QAG']
+                'RESOL': filtered['RESOL'].astype(np.float32),
+                'SNR_blue': filtered['SNR_blue_QAG'].astype(np.float32),
+                'SNR_green': filtered['SNR_green_QAG'].astype(np.float32),
+                'SNR_red': filtered['SNR_red_QAG'].astype(np.float32)
             })
+            
+            # Fill NaNs with 0 to handle missing arms (Blue/Green are mutually exclusive)
+            df = df.fillna(0)
+            
+            # Filter: Red must be present, and at least one of Blue or Green
+            df = df[((df['SNR_blue'] > 0) | (df['SNR_green'] > 0)) & (df['SNR_red'] > 0)]
+            
         return df
 
     def __len__(self):
@@ -149,32 +158,48 @@ class WeaveOnlineDataset(Dataset):
         
         final_flux = flux_conv.copy()
         
-        if np.isnan(snr_blue): final_flux[mask_blue] = 0
-        if np.isnan(snr_green): final_flux[mask_green] = 0
-        if np.isnan(snr_red): final_flux[mask_red] = 0
+        if np.isnan(snr_blue) or snr_blue <= 0: final_flux[mask_blue] = 0
+        if np.isnan(snr_green) or snr_green <= 0: final_flux[mask_green] = 0
+        if np.isnan(snr_red) or snr_red <= 0: final_flux[mask_red] = 0
         
         rng = np.random.default_rng()
-        if not np.isnan(snr_blue):
+        if not np.isnan(snr_blue) and snr_blue > 0:
             sigma = np.abs(final_flux[mask_blue]) / snr_blue
             final_flux[mask_blue] += rng.normal(0, 1, size=np.sum(mask_blue)) * sigma
-        if not np.isnan(snr_green):
+        if not np.isnan(snr_green) and snr_green > 0:
             sigma = np.abs(final_flux[mask_green]) / snr_green
             final_flux[mask_green] += rng.normal(0, 1, size=np.sum(mask_green)) * sigma
-        if not np.isnan(snr_red):
+        if not np.isnan(snr_red) and snr_red > 0:
             sigma = np.abs(final_flux[mask_red]) / snr_red
             final_flux[mask_red] += rng.normal(0, 1, size=np.sum(mask_red)) * sigma
             
         # 4. Normalize
-        mask_bg = mask_blue | mask_green
-        mask_r = mask_red
-        
-        if np.any(mask_bg) and np.any(final_flux[mask_bg] > 0):
-            f, _ = cont_norm.robust_polyfit_huber(final_flux[mask_bg], self.wave_grid[mask_bg])
-            final_flux[mask_bg] = f
+        # Normalize Blue
+        if np.any(mask_blue) and np.any(final_flux[mask_blue] > 0):
+            flux_b = final_flux[mask_blue]
+            wave_b = self.wave_grid[mask_blue]
+            norm_flux_b, _ = cont_norm.legendre_polyfit_huber(
+                flux_b, wave_b, degree=4, sigma_lower=2.0, sigma_upper=2.0
+            )
+            final_flux[mask_blue] = norm_flux_b
+
+        # Normalize Green
+        if np.any(mask_green) and np.any(final_flux[mask_green] > 0):
+            flux_g = final_flux[mask_green]
+            wave_g = self.wave_grid[mask_green]
+            norm_flux_g, _ = cont_norm.legendre_polyfit_huber(
+                flux_g, wave_g, degree=4, sigma_lower=2.0, sigma_upper=2.0
+            )
+            final_flux[mask_green] = norm_flux_g
             
-        if np.any(mask_r) and np.any(final_flux[mask_r] > 0):
-            f, _ = cont_norm.robust_polyfit_huber(final_flux[mask_r], self.wave_grid[mask_r])
-            final_flux[mask_r] = f
+        # Normalize Red
+        if np.any(mask_red) and np.any(final_flux[mask_red] > 0):
+            flux_r = final_flux[mask_red]
+            wave_r = self.wave_grid[mask_red]
+            norm_flux_r, _ = cont_norm.legendre_polyfit_huber(
+                flux_r, wave_r, degree=5, sigma_lower=1.5, sigma_upper=1.5
+            )
+            final_flux[mask_red] = norm_flux_r
             
         # 5. Cleanup
         mask_gaps = ~(mask_bg | mask_r)

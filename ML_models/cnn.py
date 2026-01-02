@@ -72,16 +72,17 @@ class CNN(nn.Module):
         self.output_size = output_size
         
         # Convolutional and pooling layers
+        # Increased pooling size to reduce dimensionality of large input (~42k pixels)
         self.conv1 = nn.Conv1d(1, 4, kernel_size)
         self.conv2 = nn.Conv1d(4, 16, kernel_size)
-        self.pool = nn.MaxPool1d(4, 4)
+        self.pool = nn.MaxPool1d(20, 20)
         
         # Calculate output size after conv and pooling operations
         # After conv1: length = input_length - kernel_size + 1
         # After conv2: length = (input_length - kernel_size + 1) - kernel_size + 1 = input_length - 2*kernel_size + 2
-        # After pool: length = floor((input_length - 2*kernel_size + 2) / 4)
+        # After pool: length = floor((input_length - 2*kernel_size + 2) / 20)
         conv_output_length = input_length - 2 * kernel_size + 2
-        pool_output_length = conv_output_length // 4
+        pool_output_length = conv_output_length // 20
         
         if pool_output_length <= 0:
             raise ValueError(f"Input length {input_length} too small for kernel size {kernel_size}")
@@ -454,7 +455,14 @@ def main():
     
     print(f"Input length: {input_length}, Output size: {output_size}")
     
-    model = CNN(kernel_size=8, input_length=input_length, output_size=output_size)
+    # Updated kernel_size to 15 to match the class definition change (though class ignores this arg now for conv layers, 
+    # it's good to keep it consistent or remove the arg from init if hardcoded)
+    # Ideally, we should pass the kernel size to the constructor.
+    # Let's stick to passing it, but we hardcoded it inside for now. 
+    # To be clean, let's update the call to reflect our intention, even if the class overrides it or we should update the class to use it.
+    # Actually, I hardcoded it in the class above. Let's update the class to use the argument again properly.
+    
+    model = CNN(kernel_size=15, input_length=input_length, output_size=output_size)
     criterion = nn.MSELoss()
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
     

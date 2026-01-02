@@ -6,8 +6,8 @@
 #SBATCH --time=04:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=32
-#SBATCH --mem=64G
+#SBATCH --cpus-per-task=16
+#SBATCH --mem=128G
 
 # Load modules (matching your environment)
 module purge
@@ -18,5 +18,6 @@ source /home/minjihk/projects/def-sfabbro/minjihk/WEAVE_Pristine/.venv/bin/activ
 
 # Run the pipeline
 echo "Starting preprocessing pipeline..."
-python preprocessing/build_dataset.py --step all
+# python preprocessing/build_dataset.py --step all
+python preprocessing/build_dataset.py --step process
 echo "Job finished."

@@ -110,6 +110,12 @@ def robust_polyfit_huber(flux, wavelength, degree=3, sigma_lower=2.0, sigma_uppe
     wl_fit = wl_norm[mask] 
     flux_fit = flux[mask]
     
+    if len(wl_fit) < degree + 1:
+        # Fallback: if too few points remain, return original flux (or maybe median normalization?)
+        # For now, let's return ones as continuum to avoid crash, or raise a specific error
+        # Returning 1.0 continuum means no normalization
+        return flux, np.ones_like(flux)
+
     # Polynomial model function: evaluates a polynomial with coeff. given by params at x  
     def poly_model(params, x):
         return np.polyval(params, x)
@@ -195,6 +201,10 @@ def legendre_polyfit_huber(flux, wavelength, degree=3, sigma_lower=2.0, sigma_up
     wl_fit = wl_norm[mask] 
     flux_fit = flux[mask]
     
+    # ---------------------FIX?
+    if len(wl_fit) < degree + 1:
+        return flux, np.ones_like(flux)
+
     # Legendre model function
     def legendre_model(params, x):
         return leg.legval(x, params)
