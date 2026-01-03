@@ -247,48 +247,56 @@ def process_spectrum_data(args):
             final_flux[mask_red] += noise_red
             
         # 5. Continuum Normalization
+        full_continuum = np.zeros_like(final_flux)
+
         # Normalize Blue
         if np.any(mask_blue) and np.any(final_flux[mask_blue] > 0):
             flux_b = final_flux[mask_blue]
             wave_b = wave_grid[mask_blue]
             # Use Legendre polynomials for better stability
             # Adjust parameters for Blue arm (shorter, maybe lower degree)
+            # Lower sigma_lower to 0.5 to better reject absorption lines
             norm_flux_b, cont_b = cont_norm.legendre_polyfit_huber(
-                flux_b, wave_b, degree=4, sigma_lower=2.0, sigma_upper=2.0
+                flux_b, wave_b, degree=3, sigma_lower=0.5, sigma_upper=2.0
             )
             # Check if normalization failed (fallback to ones)
             if np.all(cont_b == 1):
                 return None
             final_flux[mask_blue] = norm_flux_b
+            full_continuum[mask_blue] = cont_b
 
         # Normalize Green
         if np.any(mask_green) and np.any(final_flux[mask_green] > 0):
             flux_g = final_flux[mask_green]
             wave_g = wave_grid[mask_green]
             norm_flux_g, cont_g = cont_norm.legendre_polyfit_huber(
-                flux_g, wave_g, degree=4, sigma_lower=2.0, sigma_upper=2.0
+                flux_g, wave_g, degree=3, sigma_lower=0.5, sigma_upper=2.0
             )
             if np.all(cont_g == 1):
                 return None
             final_flux[mask_green] = norm_flux_g
+            full_continuum[mask_green] = cont_g
             
         # Normalize Red
         if np.any(mask_red) and np.any(final_flux[mask_red] > 0):
             flux_r = final_flux[mask_red]
             wave_r = wave_grid[mask_red]
             # User suggested degree=5, sigma=1.5 for Red
+            # Lower sigma_lower to 0.5
             norm_flux_r, cont_r = cont_norm.legendre_polyfit_huber(
-                flux_r, wave_r, degree=5, sigma_lower=1.5, sigma_upper=1.5
+                flux_r, wave_r, degree=2, sigma_lower=0.5, sigma_upper=1.5
             )
             if np.all(cont_r == 1):
                 return None
             final_flux[mask_red] = norm_flux_r
+            full_continuum[mask_red] = cont_r
             
         # 6. Final Cleanup
         mask_gaps = ~(mask_blue | mask_green | mask_red)
         final_flux[mask_gaps] = 0
+        full_continuum[mask_gaps] = 0
         
-        return final_flux, label_row
+        return final_flux, full_continuum, label_row
         
     except Exception as e:
         print(f"Error processing spectrum: {e}")
@@ -334,6 +342,7 @@ def process_from_raw_hdf5():
     
     # Process
     processed_data = []
+    processed_continuua = []
     processed_labels = []
     
     with multiprocessing.Pool(processes=multiprocessing.cpu_count()) as pool:
@@ -341,8 +350,9 @@ def process_from_raw_hdf5():
         
     for res in results:
         if res is not None:
-            flux, label = res
+            flux, continuum, label = res
             processed_data.append(flux)
+            processed_continuua.append(continuum)
             processed_labels.append(label)
             
     # Save
@@ -355,10 +365,12 @@ def process_from_raw_hdf5():
         return
 
     processed_data = np.array(processed_data)
+    processed_continuua = np.array(processed_continuua)
     labels_df_final = pd.DataFrame(processed_labels)
     
     with h5py.File(PROCESSED_HDF5_FILE, 'w') as hf:
         hf.create_dataset('spectra', data=processed_data)
+        hf.create_dataset('continuua', data=processed_continuua)
         hf.create_dataset('wavelength', data=wave_grid)
         
         grp = hf.create_group('labels')

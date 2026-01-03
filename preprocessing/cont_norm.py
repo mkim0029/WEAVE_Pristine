@@ -201,7 +201,7 @@ def legendre_polyfit_huber(flux, wavelength, degree=3, sigma_lower=2.0, sigma_up
     wl_fit = wl_norm[mask] 
     flux_fit = flux[mask]
     
-    # ---------------------FIX?
+    # --- Fallback if too few points remain
     if len(wl_fit) < degree + 1:
         return flux, np.ones_like(flux)
 
@@ -223,10 +223,17 @@ def legendre_polyfit_huber(flux, wavelength, degree=3, sigma_lower=2.0, sigma_up
     params = result.x
     continuum = leg.legval(wl_norm, params)
     
-    # Guard against division by zero
-    continuum = np.where(continuum == 0, 1, continuum)
+    # Guard against division by zero or negative/tiny continuum
+    # If continuum dives to 0 or negative, normalized flux explodes.
+    # Clip to at least 1% of the median flux (or 1e-5 if median is 0)
+    med_flux = np.median(flux)
+    min_cont = 0.01 * med_flux if med_flux > 0 else 1e-5
+    continuum = np.maximum(continuum, min_cont)
     
     norm = flux / continuum
+
+    # Clip final norm to reasonable values to avoid unphysical/extreme outliers
+    norm = np.clip(norm, 0, 1.5)
     
     return norm, continuum
 

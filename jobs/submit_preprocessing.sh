@@ -19,5 +19,5 @@ source /home/minjihk/projects/def-sfabbro/minjihk/WEAVE_Pristine/.venv/bin/activ
 # Run the pipeline
 echo "Starting preprocessing pipeline..."
 # python preprocessing/build_dataset.py --step all
-python preprocessing/build_dataset.py --step process
+python ../preprocessing/build_dataset.py --step process
 echo "Job finished."

@@ -179,7 +179,7 @@ class WeaveOnlineDataset(Dataset):
             flux_b = final_flux[mask_blue]
             wave_b = self.wave_grid[mask_blue]
             norm_flux_b, _ = cont_norm.legendre_polyfit_huber(
-                flux_b, wave_b, degree=4, sigma_lower=2.0, sigma_upper=2.0
+                flux_b, wave_b, degree=4, sigma_lower=0.5, sigma_upper=2.0
             )
             final_flux[mask_blue] = norm_flux_b
 
@@ -188,7 +188,7 @@ class WeaveOnlineDataset(Dataset):
             flux_g = final_flux[mask_green]
             wave_g = self.wave_grid[mask_green]
             norm_flux_g, _ = cont_norm.legendre_polyfit_huber(
-                flux_g, wave_g, degree=4, sigma_lower=2.0, sigma_upper=2.0
+                flux_g, wave_g, degree=4, sigma_lower=0.5, sigma_upper=2.0
             )
             final_flux[mask_green] = norm_flux_g
             
@@ -197,7 +197,7 @@ class WeaveOnlineDataset(Dataset):
             flux_r = final_flux[mask_red]
             wave_r = self.wave_grid[mask_red]
             norm_flux_r, _ = cont_norm.legendre_polyfit_huber(
-                flux_r, wave_r, degree=5, sigma_lower=1.5, sigma_upper=1.5
+                flux_r, wave_r, degree=5, sigma_lower=0.5, sigma_upper=1.5
             )
             final_flux[mask_red] = norm_flux_r
             

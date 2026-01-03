@@ -23,14 +23,16 @@ The following have been reloaded with a version change:
   final_flux[mask_red] += noise_red
 /lustre06/project/6016730/minjihk/WEAVE_Pristine/preprocessing/build_dataset.py:247: RuntimeWarning: invalid value encountered in add
   final_flux[mask_red] += noise_red
-/lustre06/project/6016730/minjihk/WEAVE_Pristine/preprocessing/build_dataset.py:247: RuntimeWarning: invalid value encountered in add
-  final_flux[mask_red] += noise_red
+/lustre06/project/6016730/minjihk/WEAVE_Pristine/preprocessing/build_dataset.py:235: RuntimeWarning: invalid value encountered in add
+  final_flux[mask_blue] += noise_blue
 /lustre06/project/6016730/minjihk/WEAVE_Pristine/preprocessing/build_dataset.py:247: RuntimeWarning: invalid value encountered in add
   final_flux[mask_red] += noise_red
 /lustre06/project/6016730/minjihk/WEAVE_Pristine/preprocessing/build_dataset.py:247: RuntimeWarning: invalid value encountered in add
   final_flux[mask_red] += noise_red
 /lustre06/project/6016730/minjihk/WEAVE_Pristine/preprocessing/build_dataset.py:235: RuntimeWarning: invalid value encountered in add
   final_flux[mask_blue] += noise_blue
+/lustre06/project/6016730/minjihk/WEAVE_Pristine/preprocessing/build_dataset.py:247: RuntimeWarning: invalid value encountered in add
+  final_flux[mask_red] += noise_red
 /lustre06/project/6016730/minjihk/WEAVE_Pristine/preprocessing/build_dataset.py:247: RuntimeWarning: invalid value encountered in add
   final_flux[mask_red] += noise_red
 /lustre06/project/6016730/minjihk/WEAVE_Pristine/preprocessing/build_dataset.py:235: RuntimeWarning: invalid value encountered in add
