@@ -10,3 +10,4 @@ __pycache__/
 *.xyz
 legacy_data/
 legacy_models/
+legacy_results/

@@ -383,7 +383,8 @@ def main():
         full_dataset = WeaveOnlineDataset(args.input, args.metadata, target_cols=target_cols)
     else:
         print(f"Loading offline dataset from {args.input}...")
-        full_dataset = SpectralDataset(args.input, load_targets=True, target_cols=target_cols)
+        # build_dataset.py saves processed spectra to 'spectra' dataset
+        full_dataset = SpectralDataset(args.input, load_targets=True, target_cols=target_cols, flux_key='spectra')
 
     # Detect final target columns
     if hasattr(full_dataset, 'target_cols') and full_dataset.target_cols is not None:

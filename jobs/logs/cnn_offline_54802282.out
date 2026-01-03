@@ -1,0 +1,153 @@
+Starting Offline Training...
+Using device: cuda
+Mode: offline
+Training on all available numeric targets (auto-detected).
+Loading offline dataset from /home/minjihk/projects/def-sfabbro/minjihk/WEAVE_Pristine/data/processed_spectra_10k.h5...
+Data validation passed
+SpectralDataset initialized:
+  File: /home/minjihk/projects/def-sfabbro/minjihk/WEAVE_Pristine/data/processed_spectra_10k.h5
+  Spectra: 9807
+  Wavelength points: 42663
+  Wavelength range: 4040.00 - 6850.00 Å
+  Flux key: spectra
+  Load targets: True
+  Target key: labels
+  Device: cpu
+Final target list (28): ['Al', 'Ba', 'C', 'Ca', 'Co', 'Cr', 'Cu', 'Eu', 'FeH', 'Li', 'Mg', 'Mn', 'N', 'Na', 'Nd', 'Ni', 'O', 'Sc', 'Si', 'Sr', 'Teff', 'Ti', 'V', 'Y', 'Zn', 'geometry', 'logg', 'vmic']
+Split sizes: Train=7845, Val=980, Test=982
+Saved test indices to /home/minjihk/projects/def-sfabbro/minjihk/WEAVE_Pristine/ML_models/output/cnn_model_offline_test_indices.npy
+Computing normalization statistics from training set...
+Target Mean: [-2.56916507e-01  1.72772467e-02  9.95342256e-01  4.39694073e-02
+ -4.60034417e-01 -4.58123646e-01 -4.52033142e-01 -1.96379860e-02
+ -1.83870363e+00 -4.51089866e-01 -4.43766730e-01 -7.62555768e-01
+  2.63093690e-01 -4.56020395e-01 -4.43562779e-01 -4.59850860e-01
+ -4.38855322e-01 -2.53664755e-04 -4.60701083e-01 -1.81975781e-02
+  5.60389841e+03 -4.30688337e-01 -4.54729127e-01  2.39643085e-02
+ -5.09077119e-01  9.05672403e-01  2.10618866e+00  1.80111281e+00]
+Target Std: [7.28258853e-01 1.15796043e+00 1.16206554e+00 6.06494718e-01
+ 8.96619534e-01 8.92262396e-01 9.02508640e-01 1.15927080e+00
+ 1.64819014e+00 9.05833990e-01 8.96006777e-01 7.21237045e-01
+ 1.30383053e+00 9.00850286e-01 8.98395434e-01 8.95332556e-01
+ 9.00520006e-01 5.76374749e-01 8.93784625e-01 1.15575633e+00
+ 1.14979757e+03 8.97140652e-01 8.97746612e-01 1.15332718e+00
+ 5.81050599e-01 1.95617236e-01 8.81536222e-01 3.46550328e-01]
+Setting target normalization statistics...
+  Mean: [-2.5691649e-01  1.7277246e-02  9.9534225e-01  4.3969408e-02
+ -4.6003443e-01 -4.5812365e-01 -4.5203313e-01 -1.9637985e-02
+ -1.8387036e+00 -4.5108986e-01 -4.4376674e-01 -7.6255578e-01
+  2.6309368e-01 -4.5602039e-01 -4.4356278e-01 -4.5985085e-01
+ -4.3885532e-01 -2.5366477e-04 -4.6070108e-01 -1.8197577e-02
+  5.6038984e+03 -4.3068835e-01 -4.5472914e-01  2.3964308e-02
+ -5.0907713e-01  9.0567243e-01  2.1061888e+00  1.8011128e+00]
+  Std: [7.2825885e-01 1.1579604e+00 1.1620655e+00 6.0649472e-01 8.9661956e-01
+ 8.9226240e-01 9.0250862e-01 1.1592708e+00 1.6481901e+00 9.0583402e-01
+ 8.9600676e-01 7.2123706e-01 1.3038305e+00 9.0085030e-01 8.9839542e-01
+ 8.9533257e-01 9.0052003e-01 5.7637477e-01 8.9378464e-01 1.1557564e+00
+ 1.1497976e+03 8.9714062e-01 8.9774662e-01 1.1533272e+00 5.8105057e-01
+ 1.9561723e-01 8.8153625e-01 3.4655032e-01]
+Input length: 42663, Output size: 28
+Starting training...
+  Train Loss (batch-average): 0.9887 | Train Loss (eval-mode full training set): 0.9689
+Epoch 1/50 | Train Loss: 0.9887 | Val Loss: 0.9654 | Grad Norm (avg/max): 0.2827/0.6286 | Duration: 32.45s
+  Train Loss (batch-average): 0.9560 | Train Loss (eval-mode full training set): 0.9406
+Epoch 2/50 | Train Loss: 0.9560 | Val Loss: 0.9367 | Grad Norm (avg/max): 0.5104/0.8326 | Duration: 12.25s
+  Train Loss (batch-average): 0.9304 | Train Loss (eval-mode full training set): 0.9155
+Epoch 3/50 | Train Loss: 0.9304 | Val Loss: 0.9144 | Grad Norm (avg/max): 0.6677/0.9590 | Duration: 11.59s
+  Train Loss (batch-average): 0.9091 | Train Loss (eval-mode full training set): 0.9018
+Epoch 4/50 | Train Loss: 0.9091 | Val Loss: 0.9006 | Grad Norm (avg/max): 0.7151/1.0705 | Duration: 11.91s
+  Train Loss (batch-average): 0.8949 | Train Loss (eval-mode full training set): 0.8913
+Epoch 5/50 | Train Loss: 0.8949 | Val Loss: 0.8917 | Grad Norm (avg/max): 0.7345/1.0679 | Duration: 11.65s
+  Train Loss (batch-average): 0.8812 | Train Loss (eval-mode full training set): 0.8731
+Epoch 6/50 | Train Loss: 0.8812 | Val Loss: 0.8744 | Grad Norm (avg/max): 0.7595/1.0251 | Duration: 12.09s
+  Train Loss (batch-average): 0.8654 | Train Loss (eval-mode full training set): 0.8556
+Epoch 7/50 | Train Loss: 0.8654 | Val Loss: 0.8584 | Grad Norm (avg/max): 0.7990/1.2617 | Duration: 12.11s
+  Train Loss (batch-average): 0.8464 | Train Loss (eval-mode full training set): 0.8371
+Epoch 8/50 | Train Loss: 0.8464 | Val Loss: 0.8425 | Grad Norm (avg/max): 0.8907/1.3160 | Duration: 11.63s
+  Train Loss (batch-average): 0.8244 | Train Loss (eval-mode full training set): 0.8119
+Epoch 9/50 | Train Loss: 0.8244 | Val Loss: 0.8197 | Grad Norm (avg/max): 0.9666/1.2980 | Duration: 12.07s
+  Train Loss (batch-average): 0.8006 | Train Loss (eval-mode full training set): 0.7892
+Epoch 10/50 | Train Loss: 0.8006 | Val Loss: 0.7996 | Grad Norm (avg/max): 0.9953/1.5172 | Duration: 11.89s
+  Train Loss (batch-average): 0.7775 | Train Loss (eval-mode full training set): 0.7630
+Epoch 11/50 | Train Loss: 0.7775 | Val Loss: 0.7752 | Grad Norm (avg/max): 1.0973/1.7697 | Duration: 12.59s
+  Train Loss (batch-average): 0.7553 | Train Loss (eval-mode full training set): 0.7434
+Epoch 12/50 | Train Loss: 0.7553 | Val Loss: 0.7595 | Grad Norm (avg/max): 1.1632/1.7138 | Duration: 12.81s
+  Train Loss (batch-average): 0.7358 | Train Loss (eval-mode full training set): 0.7234
+Epoch 13/50 | Train Loss: 0.7358 | Val Loss: 0.7425 | Grad Norm (avg/max): 1.2408/1.6445 | Duration: 13.00s
+  Train Loss (batch-average): 0.7170 | Train Loss (eval-mode full training set): 0.7070
+Epoch 14/50 | Train Loss: 0.7170 | Val Loss: 0.7296 | Grad Norm (avg/max): 1.2583/2.0910 | Duration: 13.64s
+  Train Loss (batch-average): 0.7018 | Train Loss (eval-mode full training set): 0.6907
+Epoch 15/50 | Train Loss: 0.7018 | Val Loss: 0.7144 | Grad Norm (avg/max): 1.3235/2.0219 | Duration: 12.11s
+  Train Loss (batch-average): 0.6875 | Train Loss (eval-mode full training set): 0.6756
+Epoch 16/50 | Train Loss: 0.6875 | Val Loss: 0.7032 | Grad Norm (avg/max): 1.3338/1.7701 | Duration: 12.47s
+  Train Loss (batch-average): 0.6741 | Train Loss (eval-mode full training set): 0.6642
+Epoch 17/50 | Train Loss: 0.6741 | Val Loss: 0.6925 | Grad Norm (avg/max): 1.3563/2.4143 | Duration: 12.39s
+  Train Loss (batch-average): 0.6614 | Train Loss (eval-mode full training set): 0.6541
+Epoch 18/50 | Train Loss: 0.6614 | Val Loss: 0.6853 | Grad Norm (avg/max): 1.3432/2.0335 | Duration: 12.23s
+  Train Loss (batch-average): 0.6501 | Train Loss (eval-mode full training set): 0.6437
+Epoch 19/50 | Train Loss: 0.6501 | Val Loss: 0.6753 | Grad Norm (avg/max): 1.3473/1.8578 | Duration: 12.92s
+  Train Loss (batch-average): 0.6408 | Train Loss (eval-mode full training set): 0.6344
+Epoch 20/50 | Train Loss: 0.6408 | Val Loss: 0.6708 | Grad Norm (avg/max): 1.4057/2.0628 | Duration: 12.40s
+  Train Loss (batch-average): 0.6309 | Train Loss (eval-mode full training set): 0.6253
+Epoch 21/50 | Train Loss: 0.6309 | Val Loss: 0.6625 | Grad Norm (avg/max): 1.3793/1.9255 | Duration: 11.98s
+  Train Loss (batch-average): 0.6224 | Train Loss (eval-mode full training set): 0.6150
+Epoch 22/50 | Train Loss: 0.6224 | Val Loss: 0.6560 | Grad Norm (avg/max): 1.4075/2.0670 | Duration: 12.25s
+  Train Loss (batch-average): 0.6137 | Train Loss (eval-mode full training set): 0.6069
+Epoch 23/50 | Train Loss: 0.6137 | Val Loss: 0.6489 | Grad Norm (avg/max): 1.4160/2.1866 | Duration: 17.89s
+  Train Loss (batch-average): 0.6057 | Train Loss (eval-mode full training set): 0.5989
+Epoch 24/50 | Train Loss: 0.6057 | Val Loss: 0.6428 | Grad Norm (avg/max): 1.4036/1.7869 | Duration: 11.63s
+  Train Loss (batch-average): 0.5986 | Train Loss (eval-mode full training set): 0.5908
+Epoch 25/50 | Train Loss: 0.5986 | Val Loss: 0.6387 | Grad Norm (avg/max): 1.3977/1.9093 | Duration: 11.97s
+  Train Loss (batch-average): 0.5912 | Train Loss (eval-mode full training set): 0.5849
+Epoch 26/50 | Train Loss: 0.5912 | Val Loss: 0.6322 | Grad Norm (avg/max): 1.4219/2.0596 | Duration: 11.58s
+  Train Loss (batch-average): 0.5841 | Train Loss (eval-mode full training set): 0.5825
+Epoch 27/50 | Train Loss: 0.5841 | Val Loss: 0.6333 | Grad Norm (avg/max): 1.4218/2.0273 | Duration: 11.94s
+  Train Loss (batch-average): 0.5785 | Train Loss (eval-mode full training set): 0.5724
+Epoch 28/50 | Train Loss: 0.5785 | Val Loss: 0.6258 | Grad Norm (avg/max): 1.4748/2.0424 | Duration: 11.52s
+  Train Loss (batch-average): 0.5721 | Train Loss (eval-mode full training set): 0.5691
+Epoch 29/50 | Train Loss: 0.5721 | Val Loss: 0.6238 | Grad Norm (avg/max): 1.4921/2.0616 | Duration: 11.81s
+  Train Loss (batch-average): 0.5658 | Train Loss (eval-mode full training set): 0.5630
+Epoch 30/50 | Train Loss: 0.5658 | Val Loss: 0.6193 | Grad Norm (avg/max): 1.4395/1.9514 | Duration: 11.63s
+  Train Loss (batch-average): 0.5609 | Train Loss (eval-mode full training set): 0.5547
+Epoch 31/50 | Train Loss: 0.5609 | Val Loss: 0.6160 | Grad Norm (avg/max): 1.4665/2.1460 | Duration: 11.63s
+  Train Loss (batch-average): 0.5548 | Train Loss (eval-mode full training set): 0.5510
+Epoch 32/50 | Train Loss: 0.5548 | Val Loss: 0.6131 | Grad Norm (avg/max): 1.4693/2.0220 | Duration: 11.61s
+  Train Loss (batch-average): 0.5498 | Train Loss (eval-mode full training set): 0.5454
+Epoch 33/50 | Train Loss: 0.5498 | Val Loss: 0.6082 | Grad Norm (avg/max): 1.4923/2.1900 | Duration: 12.12s
+  Train Loss (batch-average): 0.5454 | Train Loss (eval-mode full training set): 0.5393
+Epoch 34/50 | Train Loss: 0.5454 | Val Loss: 0.6072 | Grad Norm (avg/max): 1.5078/2.0769 | Duration: 11.65s
+  Train Loss (batch-average): 0.5398 | Train Loss (eval-mode full training set): 0.5367
+Epoch 35/50 | Train Loss: 0.5398 | Val Loss: 0.6047 | Grad Norm (avg/max): 1.5335/2.2328 | Duration: 11.67s
+  Train Loss (batch-average): 0.5350 | Train Loss (eval-mode full training set): 0.5325
+Epoch 36/50 | Train Loss: 0.5350 | Val Loss: 0.6024 | Grad Norm (avg/max): 1.5354/2.2816 | Duration: 11.91s
+  Train Loss (batch-average): 0.5305 | Train Loss (eval-mode full training set): 0.5276
+Epoch 37/50 | Train Loss: 0.5305 | Val Loss: 0.6026 | Grad Norm (avg/max): 1.5541/2.3704 | Duration: 11.82s
+  Train Loss (batch-average): 0.5254 | Train Loss (eval-mode full training set): 0.5203
+Epoch 38/50 | Train Loss: 0.5254 | Val Loss: 0.5971 | Grad Norm (avg/max): 1.4936/2.0236 | Duration: 11.66s
+  Train Loss (batch-average): 0.5214 | Train Loss (eval-mode full training set): 0.5157
+Epoch 39/50 | Train Loss: 0.5214 | Val Loss: 0.5939 | Grad Norm (avg/max): 1.5710/2.4795 | Duration: 11.40s
+  Train Loss (batch-average): 0.5172 | Train Loss (eval-mode full training set): 0.5119
+Epoch 40/50 | Train Loss: 0.5172 | Val Loss: 0.5914 | Grad Norm (avg/max): 1.5559/2.3988 | Duration: 11.48s
+  Train Loss (batch-average): 0.5132 | Train Loss (eval-mode full training set): 0.5103
+Epoch 41/50 | Train Loss: 0.5132 | Val Loss: 0.5927 | Grad Norm (avg/max): 1.5645/2.3655 | Duration: 11.69s
+  Train Loss (batch-average): 0.5096 | Train Loss (eval-mode full training set): 0.5036
+Epoch 42/50 | Train Loss: 0.5096 | Val Loss: 0.5888 | Grad Norm (avg/max): 1.6126/2.7816 | Duration: 12.06s
+  Train Loss (batch-average): 0.5035 | Train Loss (eval-mode full training set): 0.5029
+Epoch 43/50 | Train Loss: 0.5035 | Val Loss: 0.5888 | Grad Norm (avg/max): 1.5132/2.3303 | Duration: 15.82s
+  Train Loss (batch-average): 0.5002 | Train Loss (eval-mode full training set): 0.4986
+Epoch 44/50 | Train Loss: 0.5002 | Val Loss: 0.5874 | Grad Norm (avg/max): 1.5376/3.0498 | Duration: 11.62s
+  Train Loss (batch-average): 0.4965 | Train Loss (eval-mode full training set): 0.4914
+Epoch 45/50 | Train Loss: 0.4965 | Val Loss: 0.5836 | Grad Norm (avg/max): 1.6109/2.4109 | Duration: 11.67s
+  Train Loss (batch-average): 0.4918 | Train Loss (eval-mode full training set): 0.4881
+Epoch 46/50 | Train Loss: 0.4918 | Val Loss: 0.5812 | Grad Norm (avg/max): 1.5920/2.1926 | Duration: 12.32s
+  Train Loss (batch-average): 0.4881 | Train Loss (eval-mode full training set): 0.4848
+Epoch 47/50 | Train Loss: 0.4881 | Val Loss: 0.5802 | Grad Norm (avg/max): 1.5456/2.2151 | Duration: 12.44s
+  Train Loss (batch-average): 0.4849 | Train Loss (eval-mode full training set): 0.4800
+Epoch 48/50 | Train Loss: 0.4849 | Val Loss: 0.5781 | Grad Norm (avg/max): 1.5849/2.2167 | Duration: 12.96s
+  Train Loss (batch-average): 0.4807 | Train Loss (eval-mode full training set): 0.4746
+Epoch 49/50 | Train Loss: 0.4807 | Val Loss: 0.5776 | Grad Norm (avg/max): 1.6015/2.5462 | Duration: 12.06s
+  Train Loss (batch-average): 0.4768 | Train Loss (eval-mode full training set): 0.4735
+Epoch 50/50 | Train Loss: 0.4768 | Val Loss: 0.5792 | Grad Norm (avg/max): 1.5683/2.4309 | Duration: 12.30s
+Training finished.
+Saving model to /home/minjihk/projects/def-sfabbro/minjihk/WEAVE_Pristine/ML_models/output/cnn_model_offline.pth
+Done.
+Job finished.
