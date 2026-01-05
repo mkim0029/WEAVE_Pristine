@@ -1,97 +1,79 @@
-WEAVE Pristine Pipeline — Preprocessing Workflow
-==========================================
+WEAVE Pristine Pipeline
+=======================
 
-This README documents the current preprocessing workflow (how raw spectra become the consolidated HDF5 dataset) and points to the main scripts and outputs.
+This repository contains the pipeline for processing WEAVE-Pristine synthetic spectra, training Machine Learning models (CNNs), and evaluating their performance.
 
-For how each script works, please refer to /preprocessing/README.md.
+For a detailed description of the methodology and model architecture, please see [METHOD.md](METHOD.md).
 
 Workflow
------------------------
-1. Create a representative wavelength grid
-   - File: 
-     `preprocessing/generate_uniform_wavelength_grid_windows.py`
-   - Using default arguments and --fast.
-   - Output: ASCII grid file (default: `data/grid_wavelengths.txt` or `data/grid_wavelengths_windows.txt`).
+--------
 
-2. Prepare input files
-   - Location: `/home/minjihk/projects/rrg-kyi/astro/data/weave/nlte-grids/train_nlte`
-   - Files are expected to contain a header marker `# wave, flux` followed by two-column data (wavelength, flux).
+### 1. Data Preparation
+**Goal**: Create a standardized, normalized HDF5 dataset from raw synthetic spectra.
 
-3. Convert and validate spectra in parallel
-   - File: `preprocessing/spectrum_grid_reader.py` (the main conversion pipeline). For single-file or small-batch preprocessing you can also use `preprocessing/preprocess.py` which wraps loading, optional noise addition and normalization into a simpler interface.
-   - What: The conversion pipeline scans the input directory, then reads spectra in parallel, validating each file:
-     - Checks for NaN/Inf in wavelength or flux
-     - Detects duplicate wavelengths (keeps first occurrence)
-     - Skips files dominated by NaNs (logged to `data/skipped.txt`)
-   - Techniques: `numpy` for array ops, `scipy.interpolate` for interpolation, `concurrent.futures` for parallelism.
-   - Parallel processing may not have been necessary, but significantly sped up the job time, it ended up taking me ~ 10 min to create the file in step 6.
-
-4. Interpolate flux to the uniform grid
-   - File: `preprocessing/spectrum_grid_reader.py` (uses grid created in step 1)
-   - What: Linearly interpolate flux arrays onto the single wavelength grid created earlier.
-   - Need to be careful for spectra with sharp absorptions?
-
-5. Batch accumulation and checkpointing
-   - File: `preprocessing/spectrum_grid_reader.py`
-   - What: Accumulate results into memory-efficient batches and periodically write checkpoints so long runs can resume if interrupted.
-
-6. Write final HDF5 dataset using cluster / batch execution
-    - File: `preprocessing/grid_to_hdf5.sh`
-    - What: SLURM job script that sets resources and runs the conversion pipeline on a cluster. Use `sbatch` to submit.
-   - Output file: `data/weave_nlte_grids.h5`
-   - Structure: see `data/README.md`
-   - Techniques: `h5py` with batch writing for performance.
-
-7. Read and explore the HDF5 dataset
-   - File: `preprocessing/hdf5_spectrum_reader.py`
-   - What: Convenience class to open `weave_nlte_grids.h5`, read `get_wavelength_flux(index)` and `get_spectrum_info(index)`, and print dataset summaries.
-
-8. Interactive plotting and inspection
-   - File: `preprocessing/spectrum_plotting.ipynb`
-   - What: Notebook examples to load the HDF5 with `HDF5SpectrumReader`, plot full spectra and zoomed regions, and save plots/CSV for individual spectra.
-   - Quick test notebook: `testing/plot_spectrum.ipynb` — a small notebook added to the repo that loads `data/processed_spectra.h5` and plots wavelength vs flux for a single spectrum (handy for quick checks).
-
-Quick usage examples
---------------------
-- Generate a grid (fast preview mode):
-
+Run the full pipeline:
 ```bash
-python preprocessing/generate_uniform_wavelength_grid.py /path/to/raw_spectra --sample 500 --fast --out data/grid_wavelengths.txt
+python preprocessing/build_dataset.py --step all
 ```
+Or
 
-- Convert raw spectra to HDF5 (local run):
+1.  **Generate Wavelength Grid, Master HDF5 file (spectra) and Master CSV file (labels)**:
+    ```bash
+    python preprocessing/build_dataset.py --step ingest
+    ```
+    Creates a log-linear wavelength grid (4040-6850 Å).
 
-```bash
-python preprocessing/spectrum_grid_reader.py --input-dir data/raw --grid data/grid_wavelengths.txt --out data/weave_nlte_grids.h5
-```
+2.  **Build Dataset (Offline Processing)**:
+    ```bash
+    python preprocessing/build_dataset.py --step process
+    ```
+    *   Ingests raw spectra.
+    *   Interpolates to the common grid.
+    *   Performs continuum normalization (Legendre fit (Huber loss) + sigma clipping).
+    *   Saves to `data/processed_spectra_10k.h5`.
 
-- Quick inspect from Python:
+For online processing, see **Online Training** below (replacing step 2 above), which relies on the outputs of step 1 above.
 
-```python
-from preprocessing.hdf5_spectrum_reader import HDF5SpectrumReader
-r = HDF5SpectrumReader('data/weave_nlte_grids.h5')
-r.print_dataset_summary()
-wavelength, flux = r.get_wavelength_flux(0)
-```
+### 2. Model Training
+**Goal**: Train a CNN to predict stellar parameters and abundances.
 
-Where things live
------------------
-- `preprocessing/`: scripts, helper modules, notebooks, SLURM job scripts.
-- `data/`: generated HDF5 file (`weave_nlte_grids.h5`), grid files, and `skipped.txt`.
+*   **Offline Training** (Uses pre-processed HDF5):
+    ```bash
+    sbatch jobs/train_cnn_offline.sh
+    ```
+    Or locally:
+    ```bash
+    python ML_models/cnn.py --input data/processed_spectra_10k.h5 --model-path ML_models/output/cnn_model_offline
+    ```
 
-Model training (quick pointer)
------------------------------
-Model training scripts and examples live in the `pytorch_models/` folder. A
-documented trainer `new_MLP.py` is provided which consumes a processed HDF5
-file (for example `data/processed_spectra.h5`) and writes a model checkpoint
-and a small training history archive. See `pytorch_models/README.md` for full
-details and example commands. A minimal training example:
+*   **Online Training** (On-the-fly augmentation):
+    ```bash
+    sbatch jobs/train_cnn_online.sh
+    ```
 
-```bash
-cd pytorch_models
-python new_MLP.py --input ../data/processed_spectra.h5 --epochs 50 --batch-size 64 --lr 1e-4 --model-path ./new_mlp_model
-```
+### 3. Evaluation & Testing
+**Goal**: Assess model performance on a held-out test set.
 
-The trainer will produce `<model-path>.pth` (checkpoint with normalization stats)
-and `<model-path>.history.npz` (training/validation loss history).
+1.  **Run Inference**:
+    ```bash
+    python results/evaluate_model.py \
+        --input data/processed_spectra_10k.h5 \
+        --model-path ML_models/output/cnn_model_offline.pth \
+        --indices ML_models/output/cnn_model_offline_test_indices.npy \
+        --output-dir results/test_output
+    ```
+    Generates `test_predictions.npz`.
 
+2.  **Visualize Results**:
+    Open `results/plots.ipynb` to generate:
+    *   Violin plots of residuals.
+    *   Global RMSE/Bias summary for all 28 targets.
+    *   Parity plots (Truth vs Predicted).
+
+Directory Structure
+-------------------
+*   `preprocessing/`: Scripts for grid generation, normalization, and HDF5 creation.
+*   `ML_models/`: PyTorch model definitions (`cnn.py`) and dataset loaders.
+*   `jobs/`: SLURM scripts for cluster execution.
+*   `results/`: Evaluation scripts and visualization notebooks.
+*   `data/`: Stores generated HDF5 files and grids.
