@@ -3,7 +3,7 @@
 #SBATCH --job-name=weave_preprocess
 #SBATCH --output=logs/preprocess_%j.out
 #SBATCH --error=logs/preprocess_%j.err
-#SBATCH --time=04:00:00
+#SBATCH --time=08:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=16
@@ -18,6 +18,6 @@ source /home/minjihk/projects/def-sfabbro/minjihk/WEAVE_Pristine/.venv/bin/activ
 
 # Run the pipeline
 echo "Starting preprocessing pipeline..."
-# python preprocessing/build_dataset.py --step all
-python ../preprocessing/build_dataset.py --step process
+python preprocessing/build_dataset.py --step all
+# python preprocessing/build_dataset.py --step process
 echo "Job finished."

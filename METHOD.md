@@ -15,8 +15,10 @@ The data processing pipeline converts raw synthetic spectra into a standardized,
 *   **Script**: `preprocessing/build_dataset.py`
 *   **Input**: Raw text/CSV files containing wavelength and flux.
 *   **Process**:
-    1.  **Ingestion**: Scans raw data directories and matches spectra with metadata (stellar parameters).
-    2.  **Interpolation**: Linearly interpolates raw flux onto the common log-linear wavelength grid generated internally.
+    1.  **Ingestion & Filtering**: Scans raw data directories and matches spectra with metadata.
+        *   **Performance**: Utilizes parallel workers and high-speed I/O (`pandas`) for efficient ingestion of 10k+ spectra.
+        *   **Quality Control**: Automatically excludes spectra with unphysical flux values (negative or $>10^{17}$).
+    2.  **Interpolation**: Linearly interpolates raw flux onto the common log-linear wavelength grid.
     3.  **LSF Convolution**: Convolves the interpolated spectrum with a Gauss-Hermite Line Spread Function (LSF) to simulate the instrument resolution.
         *   **Resolution**: Randomly sampled from the Golden Sample metadata (`RESOL`).
         *   **Kernel**: Gaussian core with randomized Hermite coefficients ($h_3, h_4$) to model asymmetric line profiles.

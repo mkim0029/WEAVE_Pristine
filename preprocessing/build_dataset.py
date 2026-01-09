@@ -40,74 +40,107 @@ BLUE_ARM = (4040, 4650)
 GREEN_ARM = (4730, 5450)
 RED_ARM = (5950, 6850)
 
+# Global variables for worker initialization to avoid large IPC overhead
+_shared_wave_grid = None
+_shared_log_wave_grid = None
+_shared_golden_sample_df = None
+
+def init_worker_vars(wave_grid, log_wave_grid, golden_sample_df):
+    """Initialize global variables in each worker process."""
+    global _shared_wave_grid, _shared_log_wave_grid, _shared_golden_sample_df
+    _shared_wave_grid = wave_grid
+    _shared_log_wave_grid = log_wave_grid
+    _shared_golden_sample_df = golden_sample_df
+
 def get_wavelength_grid():
     """Create the global log-linear wavelength grid."""
     n_points = int((LOG_WAVE_END - LOG_WAVE_START) / LOG_WAVE_STEP) + 1
     log_wave = np.linspace(LOG_WAVE_START, LOG_WAVE_END, n_points)
     return np.exp(log_wave), log_wave
 
+def _ingest_worker(task):
+    """Worker function for parallel ingestion."""
+    spec_path, chunk_id, star_name, row_dict = task
+    try:
+        # Use pandas for much faster loading than np.loadtxt
+        # comment='#' to skip header lines, sep='\s+' for any whitespace
+        df = pd.read_csv(spec_path, sep='\s+', header=None, comment='#', engine='c')
+        data = df.values.astype(np.float32)
+        flux = data[:, 1]
+        
+        # QUALITY CHECK: Exclude spectra with negative flux or extreme values
+        if (flux < 0).any() or (flux > 1e17).any():
+            return None, True # excluded
+            
+        dset_name = f"{chunk_id}_{star_name}"
+        row_dict['hdf5_key'] = dset_name
+        row_dict['original_chunk'] = chunk_id
+        
+        return (dset_name, data, row_dict), False
+    except Exception:
+        return None, False
+
 def create_raw_hdf5():
     """Step 1: Ingest raw text files into a master HDF5 file."""
     print(f"Scanning {RAW_DATA_DIR}...")
     
     # Find all chunks
-    chunk_dirs = glob.glob(os.path.join(RAW_DATA_DIR, "chunk_*"))
+    chunk_dirs = sorted(glob.glob(os.path.join(RAW_DATA_DIR, "chunk_*")))
+    tasks = []
     
-    with h5py.File(RAW_HDF5_FILE, 'w') as hf:
-        # Create extensible datasets or groups
-        # Using a group per spectrum might be slow if 10k+
-        # Better to store as one large array if lengths are same? 
-        # Raw spectra might have different lengths/grids.
-        # So we should store them as variable length or individual datasets.
-        # Given Step 2 interpolates them, they are likely on different grids.
-        # Storing as individual datasets in a group is safest.
+    for chunk_dir in chunk_dirs:
+        csv_files = glob.glob(os.path.join(chunk_dir, "*.csv"))
+        if not csv_files: continue
         
+        labels_df = pd.read_csv(csv_files[0])
+        chunk_id = os.path.basename(chunk_dir) # e.g. chunk_0, chunk_1
+        
+        for idx, row in labels_df.iterrows():
+            star_name = row['star_name']
+            spec_path = os.path.join(chunk_dir, f"{star_name}_N")
+            if os.path.exists(spec_path):
+                tasks.append((spec_path, chunk_id, star_name, row.to_dict()))
+
+    if not tasks:
+        print("No spectra found.")
+        return
+
+    print(f"Found {len(tasks)} potential spectra. Ingesting using {multiprocessing.cpu_count()} cores...")
+    
+    with multiprocessing.Pool(processes=multiprocessing.cpu_count()) as pool:
+        results = pool.map(_ingest_worker, tasks)
+
+    # Metadata storage
+    meta_list = []
+    n_excluded = 0
+    n_failed = 0
+    
+    print("Writing to HDF5...")
+    with h5py.File(RAW_HDF5_FILE, 'w') as hf:
         grp = hf.create_group("raw_spectra")
         
-        # Metadata storage
-        meta_list = []
-        
-        for chunk_dir in chunk_dirs:
-            csv_files = glob.glob(os.path.join(chunk_dir, "*.csv"))
-            if not csv_files: continue
-            
-            labels_df = pd.read_csv(csv_files[0])
-            chunk_id = os.path.basename(chunk_dir) # e.g. chunk_0, chunk_1
-            
-            for idx, row in labels_df.iterrows():
-                star_name = row['star_name']
-                spec_path = os.path.join(chunk_dir, f"{star_name}_N")
-                
-                if os.path.exists(spec_path):
-                    # Read file
-                    try:
-                        # Assuming simple format
-                        data = np.loadtxt(spec_path) # shape (N, 2)
-                        # Store in HDF5
-                        # Make unique key by combining chunk and star name
-                        dset_name = f"{chunk_id}_{star_name}"
-                        if dset_name in grp:
-                            del grp[dset_name]
-                        grp.create_dataset(dset_name, data=data, compression="gzip")
-                        
-                        # Store label info
-                        row_dict = row.to_dict()
-                        row_dict['hdf5_key'] = dset_name
-                        row_dict['original_chunk'] = chunk_id
-                        meta_list.append(row_dict)
-                        
-                    except Exception as e:
-                        print(f"Failed to read {spec_path}: {e}")
+        for res, is_excluded in results:
+            if is_excluded:
+                n_excluded += 1
+            elif res is not None:
+                dset_name, data, row_dict = res
+                if dset_name in grp:
+                    del grp[dset_name]
+                grp.create_dataset(dset_name, data=data, compression="gzip")
+                meta_list.append(row_dict)
+            else:
+                n_failed += 1
 
         # Save metadata table
         if meta_list:
             meta_df = pd.DataFrame(meta_list)
-            # Save as dataset in HDF5 (structured array) or separate CSV
-            # Saving as CSV is easier for pandas
             meta_df.to_csv(RAW_HDF5_FILE.replace(".h5", "_metadata.csv"), index=False)
             print(f"Created raw HDF5 with {len(meta_list)} spectra.")
+            print(f"Excluded {n_excluded} spectra due to invalid flux values (<0 or >1e17).")
+            if n_failed > 0:
+                print(f"Failed to read {n_failed} files.")
         else:
-            print("No spectra found.")
+            print("No valid spectra found.")
 
 def load_golden_sample_metadata(fits_path):
     """Load and filter Golden Sample metadata."""
@@ -140,8 +173,8 @@ def load_golden_sample_metadata(fits_path):
 
 def generate_lsf_kernel(sigma_pix, h3, h4, size_sigma=5):
     """
-    Generate Gauss-Hermite LSF kernel.
-    LSF(x) = Gauss(x) * [1 + h3*H3(x) + h4*H4(x)]
+    Generate Gauss-Hermite LSF kernel using standard orthonormal polynomials.
+    LSF(y) = Gauss(y) * [1 + h3*H3(y) + h4*H4(y)]
     """
     # Create grid in pixels
     half_size = int(np.ceil(size_sigma * sigma_pix))
@@ -150,14 +183,14 @@ def generate_lsf_kernel(sigma_pix, h3, h4, size_sigma=5):
     # Normalized coordinate
     y = x / sigma_pix
     
-    # Gaussian part
+    # Gaussian part (standard normal weight)
     gauss = np.exp(-0.5 * y**2) / (np.sqrt(2 * np.pi) * sigma_pix)
     
-    # Hermite polynomials (Probabilist's or Physicist's? 
-    # Usually in this expansion, H3 and H4 are the standard Hermite polynomials)
-    # Using scipy.special.eval_hermite
-    H3 = eval_hermite(3, y)
-    H4 = eval_hermite(4, y)
+    # Standard orthonormal Hermite polynomials
+    # H3(y) = 1/sqrt(6) * (2*sqrt(2)*y^3 - 3*sqrt(2)*y)
+    # H4(y) = 1/sqrt(24) * (4*y^4 - 12*y^2 + 3)
+    H3 = (2*np.sqrt(2)*y**3 - 3*np.sqrt(2)*y) / np.sqrt(6)
+    H4 = (4*y**4 - 12*y**2 + 3) / np.sqrt(24)
     
     # Combine
     kernel = gauss * (1 + h3 * H3 + h4 * H4)
@@ -170,9 +203,14 @@ def generate_lsf_kernel(sigma_pix, h3, h4, size_sigma=5):
 def process_spectrum_data(args):
     """
     Process a single spectrum from data.
-    args: (raw_wave, raw_flux, label_row, wave_grid, log_wave_grid, golden_sample_df)
+    args: (raw_wave, raw_flux, label_row)
     """
-    raw_wave, raw_flux, label_row, wave_grid, log_wave_grid, golden_sample_df = args
+    raw_wave, raw_flux, label_row = args
+    
+    # Use global shared variables initialized in worker
+    wave_grid = _shared_wave_grid
+    log_wave_grid = _shared_log_wave_grid
+    golden_sample_df = _shared_golden_sample_df
     
     try:
         if len(raw_wave) == 0:
@@ -198,9 +236,11 @@ def process_spectrum_data(args):
         
         sigma_pix = 1.0 / (r_eff * LOG_WAVE_STEP * 2.355)
         
-        # Randomize h3, h4
-        h3 = np.random.normal(0, 0.005)
-        h4 = np.random.uniform(0.02, 0.07)
+        # Randomize h3, h4 (using standard orthonormal ranges)
+        # h3: asymmetry (typical range -0.1 to 0.1)
+        # h4: kurtosis (typical range 0 to 0.1)
+        h3 = np.random.uniform(-0.05, 0.05)
+        h4 = np.random.uniform(0.0, 0.05)
         
         kernel = generate_lsf_kernel(sigma_pix, h3, h4)
         flux_conv = convolve1d(flux_interp, kernel, mode='constant', cval=0.0)
@@ -334,18 +374,22 @@ def process_from_raw_hdf5():
             if key in grp:
                 data = grp[key][:]
                 # Assuming data is [N, 2] (wave, flux) or similar
-                # If it was saved as np.loadtxt, it's likely [N, 2]
                 if data.ndim == 2 and data.shape[1] >= 2:
                     raw_wave = data[:, 0]
                     raw_flux = data[:, 1]
-                    tasks.append((raw_wave, raw_flux, row, wave_grid, log_wave_grid, golden_sample_df))
+                    tasks.append((raw_wave, raw_flux, row))
     
     # Process
     processed_data = []
     processed_continuua = []
     processed_labels = []
     
-    with multiprocessing.Pool(processes=multiprocessing.cpu_count()) as pool:
+    print(f"Starting parallel processing pool with {multiprocessing.cpu_count()} cores...")
+    with multiprocessing.Pool(
+        processes=multiprocessing.cpu_count(),
+        initializer=init_worker_vars,
+        initargs=(wave_grid, log_wave_grid, golden_sample_df)
+    ) as pool:
         results = pool.map(process_spectrum_data, tasks)
         
     for res in results:
