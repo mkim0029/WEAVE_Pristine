@@ -3,7 +3,7 @@
 #SBATCH --job-name=cnn_online
 #SBATCH --output=jobs/logs/cnn_online_%j.out
 #SBATCH --error=jobs/logs/cnn_online_%j.err
-#SBATCH --time=03:00:00
+#SBATCH --time=05:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4
@@ -25,7 +25,9 @@ mkdir -p $OUTPUT_DIR
 mkdir -p jobs/logs
 
 # Run Training
-echo "Starting Online Training..."
+echo "Starting Online Training at $(date)"
+START_TIME=$(date +%s)
+
 python $PROJECT_ROOT/ML_models/cnn.py \
     --input $RAW_DATA \
     --metadata $METADATA \
@@ -36,4 +38,8 @@ python $PROJECT_ROOT/ML_models/cnn.py \
     --model-path $MODEL_PATH \
     --device cuda
 
-echo "Job finished."
+END_TIME=$(date +%s)
+DURATION=$((END_TIME - START_TIME))
+
+echo "Job finished at $(date)."
+echo "Total execution time: $(($DURATION / 3600))h $(($DURATION % 3600 / 60))m $(($DURATION % 60))s"

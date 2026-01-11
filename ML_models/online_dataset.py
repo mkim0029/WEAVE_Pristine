@@ -141,8 +141,9 @@ class WeaveOnlineDataset(Dataset):
         r_eff = lambda_center / resol
         sigma_pix = 1.0 / (r_eff * self.log_wave_step * 2.355)
         
-        h3 = np.random.normal(0, 0.005)
-        h4 = np.random.uniform(0.02, 0.07)
+        # Updated ranges and orthonormal polynomials
+        h3 = np.random.uniform(-0.05, 0.05)
+        h4 = np.random.uniform(0.0, 0.05)
         
         kernel = self._generate_lsf_kernel(sigma_pix, h3, h4)
         flux_conv = convolve1d(flux_interp, kernel, mode='constant', cval=0.0)
@@ -173,13 +174,13 @@ class WeaveOnlineDataset(Dataset):
             sigma = np.abs(final_flux[mask_red]) / snr_red
             final_flux[mask_red] += rng.normal(0, 1, size=np.sum(mask_red)) * sigma
             
-        # 4. Normalize
+        # 4. Normalize (Matches build_dataset.py degrees)
         # Normalize Blue
         if np.any(mask_blue) and np.any(final_flux[mask_blue] > 0):
             flux_b = final_flux[mask_blue]
             wave_b = self.wave_grid[mask_blue]
             norm_flux_b, _ = cont_norm.legendre_polyfit_huber(
-                flux_b, wave_b, degree=4, sigma_lower=0.5, sigma_upper=2.0
+                flux_b, wave_b, degree=3, sigma_lower=0.5, sigma_upper=2.0
             )
             final_flux[mask_blue] = norm_flux_b
 
@@ -188,7 +189,7 @@ class WeaveOnlineDataset(Dataset):
             flux_g = final_flux[mask_green]
             wave_g = self.wave_grid[mask_green]
             norm_flux_g, _ = cont_norm.legendre_polyfit_huber(
-                flux_g, wave_g, degree=4, sigma_lower=0.5, sigma_upper=2.0
+                flux_g, wave_g, degree=3, sigma_lower=0.5, sigma_upper=2.0
             )
             final_flux[mask_green] = norm_flux_g
             
@@ -197,23 +198,27 @@ class WeaveOnlineDataset(Dataset):
             flux_r = final_flux[mask_red]
             wave_r = self.wave_grid[mask_red]
             norm_flux_r, _ = cont_norm.legendre_polyfit_huber(
-                flux_r, wave_r, degree=5, sigma_lower=0.5, sigma_upper=1.5
+                flux_r, wave_r, degree=2, sigma_lower=0.5, sigma_upper=1.5
             )
             final_flux[mask_red] = norm_flux_r
             
-        # 5. Cleanup
-        mask_gaps = ~(mask_bg | mask_r)
+        # 5. Cleanup gaps
+        mask_gaps = ~(mask_blue | mask_green | mask_red)
         final_flux[mask_gaps] = 0
         
         return final_flux
 
     def _generate_lsf_kernel(self, sigma_pix, h3, h4, size_sigma=5):
+        """Standard orthonormal Gauss-Hermite LSF."""
         half_size = int(np.ceil(size_sigma * sigma_pix))
         x = np.arange(-half_size, half_size + 1)
         y = x / sigma_pix
         gauss = np.exp(-0.5 * y**2) / (np.sqrt(2 * np.pi) * sigma_pix)
-        H3 = eval_hermite(3, y)
-        H4 = eval_hermite(4, y)
+        
+        # Standard orthonormal Hermite polynomials
+        H3 = (2*np.sqrt(2)*y**3 - 3*np.sqrt(2)*y) / np.sqrt(6)
+        H4 = (4*y**4 - 12*y**2 + 3) / np.sqrt(24)
+        
         kernel = gauss * (1 + h3 * H3 + h4 * H4)
         kernel /= np.sum(kernel)
         return kernel
